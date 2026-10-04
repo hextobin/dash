@@ -135,7 +135,7 @@ const RADIUS_MI = 60;
 const NWS_PAGE = "https://forecast.weather.gov/showsigwx.php?warnzone=UTZ105&warncounty=UTC035&firewxzone=UTZ478&local_place1=Salt+Lake+City+UT";
 
 const SOURCES = [
-  {key: "news", tabs: ["safety"], name: "local news", short: "news", label: "Local news incidents", provider: "GDELT Project", home: "https://www.gdeltproject.org/", load: loadNews},
+  {key: "news", tabs: ["safety"], name: "local news", short: "news", label: "Local news incidents", provider: "Bluesky newsroom accounts", home: "https://bsky.app/profile/sltrib.com", load: loadNews},
   {key: "nws", tabs: ["weather", "safety"], name: "NWS alerts", short: "NWS", label: "Emergency and weather alerts", provider: "National Weather Service", home: "https://www.weather.gov/slc/",
    url: () => "https://api.weather.gov/alerts/active?area=UT", parse: parseNws},
   {key: "quakes", tabs: ["quakes"], name: "earthquakes", short: "quakes", label: "Earthquakes", provider: "USGS", home: "https://earthquake.usgs.gov/", url: quakeUrl, parse: parseQuakes},
@@ -146,7 +146,7 @@ const SOURCES = [
 ];
 const SCOPE = {
   now: "Watching public-safety incidents, emergency and weather alerts, earthquakes, wildfires, air quality and space weather.",
-  safety: "Watching local news for shootings, standoffs, lockdowns, evacuations, hazmat and protests in the last 36 hours, plus emergency alerts.",
+  safety: "Watching Salt Lake newsrooms for shootings, standoffs, lockdowns, evacuations, hazmat and protests in the last 36 hours, plus emergency alerts.",
   weather: "Watching NWS warnings, watches and advisories for the county, and strong space weather.",
   quakes: "Watching for magnitude 2.5+ within 60 miles over the past 7 days.",
   fire: "Watching for active wildfires within 60 miles.",
@@ -185,55 +185,46 @@ function compass(lat, lon){
 const away = (lat, lon) => { const d = miles(lat, lon); return `${d < 1 ? "<1" : Math.round(d)} mi ${compass(lat, lon)}`; };
 const paras = t => String(t || "").replace(/\r/g, "").split(/\n\s*\n/).map(x => x.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
 
-/* ---------- Local news: human-caused incidents (GDELT, last 36 hours) ---------- */
-const NEWS_PLACES = ['"Salt Lake"', '"West Valley"', '"West Jordan"', '"South Jordan"', "Taylorsville", "Millcreek", "Herriman",
-  '"Cottonwood Heights"', "Holladay", "Midvale", "Kearns", "Magna", "Draper", "Murray", "Sandy", "Riverton"];
-const NEWS_TERMS = ["shooting", "gunfire", "stabbing", "stabbed", "homicide", "murder", "standoff", "barricaded", "lockdown",
-  "evacuation", "evacuated", '"bomb threat"', "explosion", "hazmat", "protest", "kidnapping", "abducted", '"Amber Alert"', "carjacking", "manhunt"];
-const NEWS_SITES = ["ksl.com", "kslnewsradio.com", "fox13now.com", "kutv.com", "abc4.com", "sltrib.com", "deseret.com", "gephardtdaily.com", "utahnewsdispatch.com", "kuer.org"];
-const NEWS_QUERY = {
-  // Newest stories from Salt Lake newsrooms, with no keywords: light for GDELT. Incidents are matched by headline on the phone.
-  sites: `(${NEWS_SITES.map(d => "domain:" + d).join(" OR ")})`,
-  // Any outlet naming a county place plus an incident word: used if GDELT rejects the first query
-  places: `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`,
-  // Newsrooms plus incident words: kept only for the debug test (it took GDELT ~9.5 s and failed on a phone)
-  local: `(${NEWS_SITES.map(d => "domain:" + d).join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`
-};
-let newsMode = "sites", gdeltAt = 0, gdeltScript = false, gdeltQueue = Promise.resolve();
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const gdeltUrl = (q, format, max) => "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
-  `&mode=artlist&format=${format}&maxrecords=${max || 250}&timespan=36h&sort=DateDesc`;
-/* GDELT allows one request every 5 seconds. Every GDELT request waits its turn here, so they never overlap. */
-function gdeltTurn(){
-  const turn = gdeltQueue.then(async () => { const w = gdeltAt + 5500 - Date.now(); if (w > 0) await sleep(w); gdeltAt = Date.now(); });
-  gdeltQueue = turn.catch(() => {});
-  return turn;
-}
-async function gdelt(mode){
-  const q = NEWS_QUERY[mode], tag = "news/" + mode;
-  await gdeltTurn();
-  if (gdeltScript) return jsonp(gdeltUrl(q, "jsonp"), 25000, tag);
-  try { return await getJSON(gdeltUrl(q, "json"), 25000, tag); }
-  catch (e) {
-    if (!/^(unreachable|rate limited|HTTP 5)/.test(e.message)) throw e;
-    // The browser couldn't read GDELT's reply, or GDELT was busy. Wait out the limit and ask once more in
-    // GDELT's script format (JSONP), which doesn't depend on the header that lets pages read a reply.
-    await gdeltTurn();
-    try { const j = await jsonp(gdeltUrl(q, "jsonp"), 25000, tag); gdeltScript = true; return j; }
-    catch (e2) { throw e.message === "unreachable or blocked" ? e2 : e; }
-  }
-}
-/* GDELT answered, but with a message instead of results (readable text, or a script reply that never called back). */
-const rejected = e => (e.reply && !/limit requests/i.test(e.reply)) || e.message === "sent an error instead of results";
+/* ---------- Local news: Salt Lake newsroom posts on Bluesky (last 36 hours) ---------- */
+/* Accounts whose handle is a newsroom's own web domain (only the owner of the domain can claim it), and Bridgy Fed
+   bridges (*.web.brid.gy) that post every story from a newsroom's website feed. Handles that don't exist are skipped.
+   Confirmed Oct 2026: sltrib.com, ksl.com, utahnewsdispatch.com, sltrib.com.web.brid.gy, fox13now.com.web.brid.gy. */
+const NEWSROOMS = ["sltrib.com", "sltrib.com.web.brid.gy", "fox13now.com.web.brid.gy", "ksl.com", "ksl.com.web.brid.gy",
+  "utahnewsdispatch.com", "kutv.com.web.brid.gy", "abc4.com.web.brid.gy", "deseret.com.web.brid.gy",
+  "gephardtdaily.com.web.brid.gy", "kslnewsradio.com.web.brid.gy", "kuer.org"];
+const news = {found: new Set(), missing: new Set()};   // which handles answered, and which Bluesky doesn't know (skipped this visit)
+const baseDomain = h => h.replace(/\.web\.brid\.gy$/, "");
+const hostOf = u => { try { return new URL(u).hostname.toLowerCase(); } catch (e) { return ""; } };
 async function loadNews(){
-  if (newsMode === "sites"){
-    let j = null;
-    try { j = await gdelt("sites"); }
-    catch (e) { if (!rejected(e)) throw e; }
-    if (j && Array.isArray(j.articles) && j.articles.length) return parseNews(j);
-    newsMode = "places";   // rejected or empty (ten newsrooms always publish something in 36 hours), so switch for this visit
-  }
-  return parseNews(await gdelt("places"));
+  const handles = NEWSROOMS.filter(h => !news.missing.has(h));
+  const feeds = await Promise.all(handles.map(async h => {
+    try {
+      const j = await getJSON("https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?" + new URLSearchParams({actor: h, limit: "40", filter: "posts_no_replies"}),
+        15000, "bsky:" + h.replace(/\.web\.brid\.gy$/, "~"), "default");
+      news.found.add(h);
+      return postsFrom(h, j);
+    } catch (e) {
+      if (e.message === "HTTP 400") { news.missing.add(h); news.found.delete(h); }   // Bluesky: profile not found
+      return null;
+    }
+  }));
+  const got = feeds.filter(Boolean);
+  if (!got.length) throw new Error(news.missing.size === NEWSROOMS.length ? "no newsroom accounts found" : "no newsroom account answered");
+  const names = [...new Set([...news.found].map(h => outlet(baseDomain(h))))];
+  return {items: newsItems(got.flat()), note: "posts from " + join(names)};
+}
+/* One Bluesky feed → article-like records. Reposts are skipped; a link card's title is the article headline. */
+function postsFrom(handle, j){
+  if (!j || !Array.isArray(j.feed)) throw new Error("unexpected reply");
+  const home = baseDomain(handle);
+  return j.feed.filter(x => x && x.post && !x.reason).map(x => {
+    const p = x.post, r = p.record || {}, e = p.embed || {}, ext = e.external || (e.media && e.media.external) || null;
+    const text = String(r.text || "").trim();
+    const link = ext && /^https?:\/\//i.test(ext.uri || "") ? ext.uri : `https://bsky.app/profile/${handle}/post/${String(p.uri || "").split("/").pop()}`;
+    const host = hostOf(link);
+    return {title: (ext && ext.title) || text.split("\n")[0], text: [text, ext && ext.description].filter(Boolean).join(" "),
+      url: link, t: Date.parse(r.createdAt || p.indexedAt || ""), dom: host === "bsky.app" ? home : host};
+  });
 }
 /* First matching rule wins: [label, headline pattern, level while fresh]. */
 const NEWS_RULES = [
@@ -282,44 +273,43 @@ const STOP = new Set(("says said after with from that this into over near their 
   "police officers officer utah county city update updated breaking video watch live shot shooting killed dead dies died death injured hurt " +
   "suspect suspects arrested arrest investigate investigating investigation").split(" "));
 const words = t => new Set((t.replace(PLACE_ALL, " ").toLowerCase().match(/[a-z]{4,}/g) || []).filter(w => !STOP.has(w)));
-/* Two headlines describe the same incident if they share a category and either the same town within 12 hours or most distinctive words. */
+/* Two posts describe the same incident if they share a category and either (same town, within 6 hours, and a shared
+   distinctive word) or most distinctive words. Errs toward showing a duplicate rather than hiding a new incident. */
 function same(a, b){
   if (a.rule !== b.rule) return false;
-  const specific = p => p && !GENERIC.has(p);
-  if (specific(a.place) && specific(b.place)) return a.place === b.place && Math.abs(a.t - b.t) < 12 * 3.6e6;
   let n = 0; a.w.forEach(x => { if (b.w.has(x)) n++; });
+  const specific = p => p && !GENERIC.has(p);
+  if (specific(a.place) && specific(b.place)) return a.place === b.place && Math.abs(a.t - b.t) < 6 * 3.6e6 && n >= 1;
   return n >= 2 && n / Math.max(1, Math.min(a.w.size, b.w.size)) >= 0.5;
 }
-function gdeltTime(s){
-  const m = /^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/.exec(s || "");
-  return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : NaN;
-}
-function parseNews(j){
-  if (!j || typeof j !== "object") throw new Error("unexpected response");
-  const kept = [];
-  for (const a of Array.isArray(j.articles) ? j.articles : []){
-    const title = cleanTitle(a.title);
-    const url = String(a.url || "").replace(/^http:\/\//i, "https://"), dom = String(a.domain || "").toLowerCase();
-    if (!title || !/^https:\/\//.test(url) || SKIP_PATH.test(url) || NOT_LIVE.test(title)) continue;
-    const rule = NEWS_RULES.find(r => r[1].test(title));
+const normUrl = u => u.replace(/[?#].*$/, "").replace(/\/+$/, "").replace(/^https:\/\/www\./i, "https://").toLowerCase();
+/* Article-like records {title, text, url, t, dom} → incident cards. Rules match the headline first, then the post text. */
+function newsItems(list){
+  const kept = [], cut = Date.now() - 36 * 3.6e6;
+  list.sort((a, b) => (b.t || 0) - (a.t || 0));
+  for (const a of list){
+    const title = cleanTitle(a.title), text = String(a.text || "");
+    const url = String(a.url || "").replace(/^http:\/\//i, "https://"), dom = String(a.dom || "").toLowerCase();
+    if (!title || !(a.t > cut) || !/^https:\/\//.test(url) || SKIP_PATH.test(url) || NOT_LIVE.test(title)) continue;
+    const rule = NEWS_RULES.find(r => r[1].test(title)) || NEWS_RULES.find(r => r[1].test(text));
     if (!rule) continue;
-    const place = placeIn(title);
-    if (!place && (!localKey(dom) || OTHER_UT.test(title) || ELSEWHERE.test(title))) continue;
-    const c = {title, url, t: gdeltTime(a.seendate), w: words(title), rule, place, outlets: [outlet(dom)]};
-    const dup = kept.find(k => same(k, c));
+    const place = placeIn(title) || placeIn(text);
+    if (!place && (!localKey(dom) || OTHER_UT.test(title + " " + text) || ELSEWHERE.test(title))) continue;
+    const c = {key: normUrl(url), title, url, t: a.t, w: words(title), rule, place, outlets: [outlet(dom)]};
+    const dup = kept.find(k => k.key === c.key) || kept.find(k => same(k, c));   // same article, or same incident
     if (dup){ if (!dup.outlets.includes(c.outlets[0])) dup.outlets.push(c.outlets[0]); continue; }
     kept.push(c);
   }
   return kept.map(k => {
     const fresh = Date.now() - k.t < 12 * 3.6e6;
     const more = k.outlets.length > 1 ? ` +${k.outlets.length - 1}` : "";
-    return {id: "news:" + k.url, tab: "safety", level: fresh ? k.rule[2] : 1, time: k.t,
-      title: k.title, meta: [k.rule[0], k.place || "Utah", isFinite(k.t) ? ago(k.t) : "", k.outlets[0] + more].filter(Boolean).join(" · "),
+    return {id: "news:" + k.key, tab: "safety", level: fresh ? k.rule[2] : 1, time: k.t,
+      title: k.title, meta: [k.rule[0], k.place || "Utah", ago(k.t), k.outlets[0] + more].join(" · "),
       detail: [
         {p: k.title, lead: true},
-        {p: `${k.rule[0]}${k.place ? " · " + k.place : ""}. Reported ${isFinite(k.t) ? stamp(k.t) : "recently"} by ${join(k.outlets)}.`},
-        {small: "Headlines from local news outlets matched by keyword through the GDELT Project. The location shown comes from the headline; open the article for details."}
-      ], link: k.url, linkLabel: "article"};
+        {p: `${k.rule[0]}${k.place ? " · " + k.place : ""}. Posted ${stamp(k.t)} by ${join(k.outlets)}.`},
+        {small: "Stories posted by Salt Lake newsrooms on Bluesky, matched by keyword. The location comes from the post; open it for details."}
+      ], link: k.url, linkLabel: hostOf(k.url) === "bsky.app" ? "post" : "article"};
   });
 }
 
@@ -569,7 +559,7 @@ function openSources(){
   const rows = SOURCES.map(s => {
     const st = state.src[s.key] || {}, wait = st.busy || st.ok === undefined;
     const line = wait ? `Checking… · ${s.provider}`
-      : st.ok ? `Up · ${s.provider}`
+      : st.ok ? `Up · ${s.provider}${st.note ? " · " + st.note : ""}`
       : `Down: ${st.err}${st.okAt ? " · last worked " + when(st.okAt) : ""} · ${s.provider}`;
     return `<li><i class="${wait ? "" : st.ok ? "up" : "down"}"></i><div><b>${esc(s.label)}</b><span>${esc(line)}</span></div></li>`;
   }).join("");
@@ -580,14 +570,14 @@ function openSources(){
 
 /* ---------- fetching (every request is noted for the debug report) ---------- */
 const kb = n => n < 1024 ? n + " B" : (n / 1024).toFixed(1) + " KB";
-const count = j => !j || typeof j !== "object" ? "no data" : Array.isArray(j.articles) ? j.articles.length + " articles"
+const count = j => !j || typeof j !== "object" ? "no data" : Array.isArray(j.feed) ? j.feed.length + " posts"
   : Array.isArray(j.features) ? j.features.length + " records" : Object.keys(j).length + " fields";
 const snippet = t => String(t).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-async function getJSON(url, ms, tag){
+async function getJSON(url, ms, tag, cache){
   const t0 = Date.now(), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms || 15000);
   let r, text;
   try {
-    r = await fetch(url, {signal: ctl.signal, cache: "no-store"});
+    r = await fetch(url, {signal: ctl.signal, cache: cache || "no-store"});
     text = await r.text();
   } catch (e) {
     note(tag, "fetch", t0, `${e.name}: ${e.message}`);
@@ -597,39 +587,11 @@ async function getJSON(url, ms, tag){
   } finally { clearTimeout(timer); }
   let j = null;
   if (!text.trim()) j = {};
-  else try { j = JSON.parse(text); } catch (e) {
-    // GDELT occasionally sends stray control characters or bad escapes inside titles
-    try { j = JSON.parse(text.replace(/[\u0000-\u001f]+/g, " ").replace(/\\'/g, "'").replace(/\\(?!["\\\/bfnrtu])/g, "\\\\")); } catch (e2) {}
-  }
+  else try { j = JSON.parse(text); } catch (e) {}
   note(tag, "fetch", t0, `HTTP ${r.status} · ${r.headers.get("content-type") || "no type"} · ${kb(text.length)} · ` + (j ? count(j) : `reply "${snippet(text).slice(0, 90)}"`));
   if (!r.ok) throw new Error(r.status === 429 ? "rate limited" : "HTTP " + r.status);
   if (j) return j;
-  const reply = snippet(text);
-  const err = new Error(/limit requests/i.test(reply) ? "rate limited" : `unexpected reply: "${reply.slice(0, 70)}"`);
-  err.reply = reply;
-  throw err;
-}
-/* Script-tag request (JSONP): works even when a reply lacks the header that lets pages read it with fetch. */
-let jsonpN = 0;
-function jsonp(url, ms, tag){
-  return new Promise((resolve, reject) => {
-    const t0 = Date.now(), cb = "slcwCb" + (++jsonpN) + t0.toString(36), s = document.createElement("script");
-    let done = false, timer;
-    const end = (err, data) => {
-      if (done) return;
-      done = true; clearTimeout(timer); s.remove();
-      window[cb] = () => {};   // a late reply must not throw
-      note(tag, "script", t0, err || "callback · " + count(data));
-      err ? reject(new Error(err)) : resolve(data && typeof data === "object" ? data : {});
-    };
-    timer = setTimeout(() => end("timed out"), ms);
-    window[cb] = data => end(null, data);
-    s.onerror = () => end("unreachable or blocked");   // an HTTP error status, or no connection
-    s.onload = () => setTimeout(() => end("sent an error instead of results"), 0);   // loaded but never called back
-    s.referrerPolicy = "no-referrer";
-    s.src = url + "&callback=" + cb;
-    document.head.append(s);
-  });
+  throw new Error(`unexpected reply: "${snippet(text).slice(0, 70)}"`);
 }
 async function check(){
   if (state.busy) return;
@@ -639,10 +601,11 @@ async function check(){
   await Promise.all(SOURCES.map(async s => {
     const st = state.src[s.key];
     try {
-      const items = s.load ? await s.load() : s.parse(await getJSON(s.url(), 0, s.key));
+      const got = s.load ? await s.load() : s.parse(await getJSON(s.url(), 0, s.key));
+      const items = Array.isArray(got) ? got : got.items;
       items.forEach(i => { if (!i.tab) i.tab = s.tabs[0]; });
       state.items[s.key] = items;
-      Object.assign(st, {ok: true, okAt: Date.now(), err: ""});
+      Object.assign(st, {ok: true, okAt: Date.now(), err: "", note: Array.isArray(got) ? "" : got.note || ""});
     } catch (err) {
       Object.assign(st, {ok: false, err: err.message || "failed"});  // keep the last good results for this source
       console.warn(s.label, err);
@@ -655,12 +618,12 @@ async function check(){
 }
 
 /* ---------- debug report (Sources → Debug info) ---------- */
-const BUILD = "2026-10-04 19:45Z 092d1c3";
-const dbg = {log: [], errors: [], opened: Date.now(), checks: 0, test: null};
+const BUILD = "2026-10-04 20:01Z ba2570d";
+const dbg = {log: [], errors: [], opened: Date.now(), checks: 0};
 const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
 function note(tag, kind, t0, result){
   dbg.log.push({t0, ms: Date.now() - t0, tag: tag || "-", kind, result});
-  if (dbg.log.length > 60) dbg.log.shift();
+  if (dbg.log.length > 80) dbg.log.shift();
   updateDebug();
 }
 addEventListener("error", e => { dbg.errors.push(`${hms(Date.now())} ${e.message || "error"}${e.filename ? " @ " + e.filename.split("/").pop() + ":" + e.lineno : ""}`); if (dbg.errors.length > 20) dbg.errors.shift(); });
@@ -679,9 +642,8 @@ function debugReport(){
     const x = state.src[s.key] || {};
     L.push(`  ${s.key.padEnd(6)} ${x.busy ? "checking" : x.ok === undefined ? "not yet" : x.ok ? "up" : "DOWN: " + x.err} · ${(state.items[s.key] || []).length} flagged${x.okAt ? " · last ok " + hms(x.okAt) : ""}`);
   }
-  L.push(`  news query: ${newsMode} · script format: ${gdeltScript ? "in use" : "not used"}`, "", "GDELT test:");
-  if (!dbg.test) L.push("  not run");
-  else { dbg.test.lines.forEach(x => L.push("  " + x)); if (dbg.test.running) L.push("  running…"); }
+  L.push(`  newsroom accounts answering: ${[...news.found].join(", ") || "none yet"}`);
+  if (news.missing.size) L.push(`  not on Bluesky: ${[...news.missing].join(", ")}`);
   L.push("", "Requests (oldest first):");
   dbg.log.forEach(e => L.push(`  ${hms(e.t0)} ${e.tag.padEnd(11)} ${e.kind.padEnd(6)} ${String(e.ms).padStart(5)}ms  ${e.result}`));
   if (dbg.errors.length){ L.push("", "Page errors:"); dbg.errors.forEach(x => L.push("  " + x)); }
@@ -689,7 +651,6 @@ function debugReport(){
 }
 function openDebug(){
   showSheet(`<h2>Debug info</h2><div class="sub" id="dbgSub"></div><pre id="dbg"></pre><div class="row"><button class="btn go" type="button" data-copy>Copy</button>${CLOSE}</div>`);
-  runTest();
   updateDebug();
 }
 function updateDebug(){
@@ -698,45 +659,7 @@ function updateDebug(){
   const top = pre.scrollTop;
   pre.textContent = debugReport();
   pre.scrollTop = top;
-  $("#dbgSub").textContent = dbg.test && dbg.test.running ? "Testing the news source, up to a minute…" : "Done. Tap Copy, then paste it into the chat.";
-}
-/* From this device: a minimal query read normally and as a script, to see whether GDELT lets pages read a plain reply.
-   Through a public relay (allorigins.win): the real queries, to see GDELT's actual status, timing and reply text from
-   outside this network. The relay is only used here, never for the dashboard itself. */
-const RELAY = "https://api.allorigins.win/get?url=";
-async function runTest(){
-  if (dbg.test && dbg.test.running) return;
-  const T = dbg.test = {running: true, lines: []}, add = x => { T.lines.push(x); updateDebug(); };
-  const timed = async fn => { const t0 = Date.now(); try { return [await fn(), Date.now() - t0]; } catch (e) { return [e, Date.now() - t0]; } };
-  const limit = ms => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; };
-  const show = (r, ms) => `${String(ms).padStart(5)}ms  ${r instanceof Error ? (r.name === "Error" ? "" : r.name + ": ") + r.message : r}`;
-  const body = t => { try { return count(JSON.parse(t)); } catch (e) { return `reply "${snippet(t).slice(0, 160)}"`; } };
-  const direct = (async () => {
-    const one = q => gdeltUrl(q, "json", 5);
-    await gdeltTurn();
-    const [a, msA] = await timed(async () => {
-      const r = await fetch(one("domain:ksl.com"), {cache: "no-store", signal: limit(20000)}), t = await r.text();
-      return `HTTP ${r.status} · ${r.headers.get("content-type") || "no type"} · ${body(t)}`;
-    });
-    add(`D1 phone fetch  minimal query ${show(a, msA)}`);
-    await gdeltTurn();
-    const [b, msB] = await timed(() => jsonp(gdeltUrl("domain:ksl.com", "jsonp", 5), 20000, "test").then(j => "callback · " + count(j)));
-    add(`D2 phone script minimal query ${show(b, msB)}`);
-  })();
-  const relayed = (async () => {
-    for (const [name, q, max] of [["old query", NEWS_QUERY.local, 5], ["new query", NEWS_QUERY.sites, 250]]){
-      const [r, ms] = await timed(async () => {
-        const res = await fetch(RELAY + encodeURIComponent(gdeltUrl(q, "json", max)), {cache: "no-store", signal: limit(40000)});
-        if (!res.ok) throw new Error("relay HTTP " + res.status);
-        const j = await res.json(), st = j.status || {};
-        return `GDELT HTTP ${st.http_code ?? "?"} · ${st.content_type || "no type"}${st.response_time != null ? " · GDELT took " + st.response_time + "ms" : ""} · ${body(j.contents || "")}`;
-      });
-      add(`R  relay ${name.padEnd(13)}  ${show(r, ms)}`);
-      await sleep(5500);
-    }
-  })();
-  await Promise.all([direct, relayed]);
-  T.running = false; updateDebug();
+  $("#dbgSub").textContent = state.busy ? "A check is running; the report updates as sources answer." : "Tap Copy, then paste it into the chat.";
 }
 async function copyDebug(btn){
   const text = debugReport();
