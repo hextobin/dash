@@ -25,6 +25,8 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
+html,body{background:var(--surface)!important}
+.app{background:var(--bg)}
 body{background:var(--bg);color:var(--ink);font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
 [hidden]{display:none!important}
@@ -33,7 +35,6 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .app{position:fixed;inset:0;max-width:560px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 /* Home-screen app: iOS can report a viewport that stops short of the home-indicator area, leaving a strip under
    the tab bar. Size to the full screen there, and paint anything left over in the tab bar's color. */
-html.app-mode{background:var(--surface)}
 html.app-mode .app{bottom:auto;height:100vh;height:100lvh}
 header{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 10px;border-bottom:1px solid var(--line)}
 .hd{flex:1;min-width:0}
@@ -47,11 +48,6 @@ h1{margin:0;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:u
 #status.down i{background:var(--sev2)}
 #status span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #status svg{width:12px;height:12px;flex:none}
-#refresh{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--ink2)}
-#refresh svg{width:18px;height:18px}
-#refresh.spin svg{animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){#refresh.spin svg{animation:none}}
 
 main{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:12px 16px}
 .cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -112,7 +108,6 @@ nav button[aria-selected="true"]{color:var(--accent)}
       <div class="state" aria-live="polite"><i class="dot" id="dot"></i><span id="headline">Checking…</span></div>
       <button id="status" type="button" aria-label="Source status"><i></i><span id="stext">Checking sources…</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     </div>
-    <button id="refresh" type="button" aria-label="Check again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></button>
   </header>
 
   <main id="main">
@@ -593,7 +588,6 @@ function render(){
   const dn = SOURCES.filter(isDown), wait = SOURCES.filter(s => !known(s)).length;
   $("#dot").style.background = items.length ? LEVEL_COLOR[top] : "var(--line)";
   $("#headline").textContent = items.length ? `${items.length} flagged` : wait ? "Checking…" : dn.length === SOURCES.length ? "No data" : "Nothing flagged";
-  $("#refresh").classList.toggle("spin", state.busy);
   renderStatus(dn, wait);
 
   document.querySelectorAll("#tabs button").forEach(b => {
@@ -616,7 +610,7 @@ function render(){
     const none = !waiting && failed.length === srcs.length;
     $("#emptyTitle").textContent = waiting ? "Checking…" : none ? `Couldn't load ${state.tab === "now" ? "any source" : join(failed.map(s => s.name))}` : "Nothing flagged";
     $("#emptyText").textContent = waiting ? ""
-      : none ? "Tap the source status at the top for details, then try refresh."
+      : none ? "Tap the source status at the top for details, then tap Check again."
       : failed.length ? `${cap(join(failed.map(s => s.name)))} didn't load, so this may be incomplete.`
       : SCOPE[state.tab];
   }
@@ -733,7 +727,7 @@ async function check(){
 }
 
 /* ---------- debug report (Sources → Debug info) ---------- */
-const BUILD = "2026-10-04 22:22Z 62e4d0c";
+const BUILD = "2026-10-04 22:26Z 8fcc3da";
 const dbg = {log: [], errors: [], opened: Date.now(), checks: 0};
 const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
 function note(tag, kind, t0, result){
@@ -804,7 +798,6 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-debug]")){ openDebug(); return; }
   const cp = e.target.closest("[data-copy]");
   if (cp){ copyDebug(cp); return; }
-  if (e.target.closest("#refresh")){ check(); return; }
   if (e.target.closest("[data-close]") || e.target.id === "sheet") closeSheet();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
@@ -817,6 +810,14 @@ document.addEventListener("visibilitychange", () => {
 
 render();
 check();
+/* A home-screen app can keep running an old copy; reload once when a newer build is published. */
+(async () => {
+  try {
+    const html = await (await fetch(location.pathname + "?v=" + Date.now(), {cache: "no-store"})).text();
+    const live = (/const BUILD = "([^"]+)"/.exec(html) || [])[1];
+    if (live && live !== BUILD && sessionStorage.getItem("slcw-reloaded") !== live){ sessionStorage.setItem("slcw-reloaded", live); location.reload(); }
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
