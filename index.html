@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Salt Lake County Watch</title>
-<meta name="description" content="What's out of the ordinary in Salt Lake County, Utah: official alerts, earthquakes, wildfires, air quality and space weather, checked live.">
+<meta name="description" content="What's out of the ordinary in Salt Lake County, Utah: public-safety incidents, emergency and weather alerts, earthquakes, wildfires, air quality and space weather, checked live.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="SLCo Watch">
@@ -31,12 +31,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .app{position:fixed;inset:0;max-width:560px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
-header{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;border-bottom:1px solid var(--line)}
+header{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 10px;border-bottom:1px solid var(--line)}
 .hd{flex:1;min-width:0}
 h1{margin:0;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.state{display:flex;align-items:baseline;gap:8px;margin-top:5px;font-size:21px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
-.dot{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none;align-self:center}
-.state small{font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:0}
+.state{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:21px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+#status{display:flex;align-items:center;gap:6px;max-width:100%;margin-top:5px;padding:2px 0;font-size:12.5px;font-weight:500;color:var(--muted);text-align:left}
+#status i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--line)}
+#status.up i{background:var(--accent)}
+#status.down{color:var(--ink2)}
+#status.down i{background:var(--sev2)}
+#status span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status svg{width:12px;height:12px;flex:none}
 #refresh{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--ink2)}
 #refresh svg{width:18px;height:18px}
 #refresh.spin svg{animation:spin .9s linear infinite}
@@ -55,14 +61,13 @@ main{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px;pad
 #more{align-self:flex-start;padding:4px 2px;font-size:14px;font-weight:650;color:var(--accent)}
 .empty{margin:auto 0;text-align:center}
 .empty b{display:block;font-size:18px}
-.empty span{display:block;max-width:30ch;margin:6px auto 0;font-size:13.5px;color:var(--muted)}
-#note{margin:0;font-size:12.5px;color:var(--muted)}
+.empty span{display:block;max-width:31ch;margin:6px auto 0;font-size:13.5px;color:var(--muted)}
 
-nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom,0px) + 6px)}
-nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0 4px;border-radius:10px;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+nav{display:grid;grid-template-columns:repeat(6,1fr);background:var(--surface);border-top:1px solid var(--line);padding:6px 2px calc(env(safe-area-inset-bottom,0px) + 6px)}
+nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0 4px;border-radius:10px;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 nav button svg{width:22px;height:22px}
 nav button[aria-selected="true"]{color:var(--accent)}
-.badge{position:absolute;top:0;left:calc(50% + 5px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;border:2px solid var(--surface);font:700 11px/14px system-ui,-apple-system,sans-serif;letter-spacing:0;color:#fff;text-align:center}
+.badge{position:absolute;top:0;left:calc(50% + 4px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;border:2px solid var(--surface);font:700 11px/14px system-ui,-apple-system,sans-serif;letter-spacing:0;color:#fff;text-align:center}
 .badge.l3{background:var(--sev3)}.badge.l2{background:var(--sev2)}.badge.l1{background:var(--sev1);color:#2a1c00}
 
 .sheet{position:fixed;inset:0;z-index:9;display:flex;align-items:flex-end;justify-content:center;background:rgba(4,9,11,.55)}
@@ -74,9 +79,17 @@ nav button[aria-selected="true"]{color:var(--accent)}
 .panel p.small{font-size:12.5px;color:var(--muted)}
 .panel .k{margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .panel .cards{margin-top:14px}
+.srcs{list-style:none;margin:14px 0 0;padding:0}
+.srcs li{display:flex;gap:10px;align-items:baseline;padding:10px 0;border-top:1px solid var(--line)}
+.srcs li:first-child{border-top:0}
+.srcs i{width:8px;height:8px;border-radius:50%;flex:none;background:var(--line);transform:translateY(-1px)}
+.srcs i.up{background:var(--accent)}.srcs i.down{background:var(--sev2)}
+.srcs b{display:block;font-weight:650}
+.srcs span{display:block;font-size:13px;color:var(--ink2)}
 .row{display:flex;gap:8px;margin-top:20px}
 .btn{flex:1;display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid var(--line);font-weight:650;font-size:15px;color:var(--ink);text-decoration:none}
 .btn.go{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn[disabled]{opacity:.55;cursor:default}
 </style>
 </head>
 <body>
@@ -84,7 +97,8 @@ nav button[aria-selected="true"]{color:var(--accent)}
   <header>
     <div class="hd">
       <h1>Salt Lake County Watch</h1>
-      <div class="state" aria-live="polite"><i class="dot" id="dot"></i><span id="headline">Checking…</span><small id="checked"></small></div>
+      <div class="state" aria-live="polite"><i class="dot" id="dot"></i><span id="headline">Checking…</span></div>
+      <button id="status" type="button" aria-label="Source status"><i></i><span id="stext">Checking sources…</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
     </div>
     <button id="refresh" type="button" aria-label="Check again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></button>
   </header>
@@ -93,12 +107,12 @@ nav button[aria-selected="true"]{color:var(--accent)}
     <ul class="cards" id="list"></ul>
     <button id="more" type="button" hidden></button>
     <div class="empty" id="empty" hidden><b id="emptyTitle"></b><span id="emptyText"></span></div>
-    <p id="note"></p>
   </main>
 
   <nav id="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" data-tab="now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/></svg>Now</button>
-    <button type="button" role="tab" data-tab="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>Alerts</button>
+    <button type="button" role="tab" data-tab="safety"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.2 7.5 9.5 4.3-1.3 7.5-4.9 7.5-9.5V6L12 3z"/></svg>Safety</button>
+    <button type="button" role="tab" data-tab="weather"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17.5a4.5 4.5 0 1 1 1-8.9 6 6 0 0 1 11.3 2.4A3.3 3.3 0 0 1 18.5 17.5H7z"/><path d="m12.5 13-2 3.5h3l-2 3.5"/></svg>Weather</button>
     <button type="button" role="tab" data-tab="quakes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2.5-6 4 13 3-9 2 3H22"/></svg>Quakes</button>
     <button type="button" role="tab" data-tab="fire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c4 0 7-2.8 7-6.8 0-3.3-2-5.6-4-8.2-.8 2.3-2 3.4-3.2 3.6C12 7.4 10.8 4.6 8.6 2.8 8.5 7.6 5 9.4 5 15.2 5 19.2 8 22 12 22z"/></svg>Fire</button>
     <button type="button" role="tab" data-tab="air"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5h10.5a3 3 0 1 0-3-3M3 12.5h15a3 3 0 1 1-3 3M3 16.5h7"/></svg>Air</button>
@@ -119,22 +133,25 @@ const RADIUS_MI = 60;
 const NWS_PAGE = "https://forecast.weather.gov/showsigwx.php?warnzone=UTZ105&warncounty=UTC035&firewxzone=UTZ478&local_place1=Salt+Lake+City+UT";
 
 const SOURCES = [
-  {key: "nws", tab: "alerts", name: "NWS alerts", headers: {Accept: "application/geo+json"},
+  {key: "news", tabs: ["safety"], name: "local news", short: "news", label: "Local news incidents", provider: "GDELT Project", home: "https://www.gdeltproject.org/", url: newsUrl, parse: parseNews,
+   wait: 25000, gap: 6000},   // GDELT can be slow and allows one request every 5 seconds
+  {key: "nws", tabs: ["weather", "safety"], name: "NWS alerts", short: "NWS", label: "Emergency and weather alerts", provider: "National Weather Service", home: "https://www.weather.gov/slc/",
    url: () => "https://api.weather.gov/alerts/active?area=UT", parse: parseNws},
-  {key: "space", tab: "alerts", name: "space weather",
-   url: () => "https://services.swpc.noaa.gov/products/noaa-scales.json", parse: parseSpace},
-  {key: "quakes", tab: "quakes", name: "earthquakes", url: quakeUrl, parse: parseQuakes},
-  {key: "fire", tab: "fire", name: "wildfires", url: fireUrl, parse: parseFires},
-  {key: "air", tab: "air", name: "air quality", url: airUrl, parse: parseAir}
+  {key: "quakes", tabs: ["quakes"], name: "earthquakes", short: "quakes", label: "Earthquakes", provider: "USGS", home: "https://earthquake.usgs.gov/", url: quakeUrl, parse: parseQuakes},
+  {key: "fire", tabs: ["fire"], name: "wildfires", short: "fires", label: "Wildfires", provider: "NIFC (WFIGS)", home: "https://utahfireinfo.gov/", url: fireUrl, parse: parseFires},
+  {key: "air", tabs: ["air"], name: "air quality", short: "air", label: "Air quality", provider: "Open-Meteo (CAMS model)", home: "https://air.utah.gov/", url: airUrl, parse: parseAir},
+  {key: "space", tabs: ["weather"], name: "space weather", short: "space", label: "Space weather", provider: "NOAA SWPC", home: "https://www.swpc.noaa.gov/",
+   url: () => "https://services.swpc.noaa.gov/products/noaa-scales.json", parse: parseSpace}
 ];
 const SCOPE = {
-  now: "Watching official alerts, earthquakes, wildfires, air quality and space weather.",
-  alerts: "Watching NWS warnings, watches and advisories for the county, and strong space weather.",
+  now: "Watching public-safety incidents, emergency and weather alerts, earthquakes, wildfires, air quality and space weather.",
+  safety: "Watching local news for shootings, standoffs, lockdowns, evacuations, hazmat and protests in the last 36 hours, plus emergency alerts.",
+  weather: "Watching NWS warnings, watches and advisories for the county, and strong space weather.",
   quakes: "Watching for magnitude 2.5+ within 60 miles over the past 7 days.",
   fire: "Watching for active wildfires within 60 miles.",
   air: "Watching for unhealthy air now or in the next 24 hours."
 };
-const TITLES = {now: "Everything flagged", alerts: "Alerts", quakes: "Earthquakes", fire: "Wildfires", air: "Air quality"};
+const TITLES = {now: "Everything flagged", safety: "Public safety", weather: "Weather", quakes: "Earthquakes", fire: "Wildfires", air: "Air quality"};
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -146,6 +163,7 @@ const clock = ms => fmt(ms, {hour: "numeric", minute: "2-digit"}).replace(":00",
 const when = ms => !isFinite(ms) ? "" : dayKey(ms) === dayKey(Date.now()) ? clock(ms) : fmt(ms, {weekday: "short"}) + " " + clock(ms);
 const stamp = ms => fmt(ms, {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"});
 const join = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 function ago(ms){
   const s = (Date.now() - ms) / 1000;
   if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min ago";
@@ -166,7 +184,106 @@ function compass(lat, lon){
 const away = (lat, lon) => { const d = miles(lat, lon); return `${d < 1 ? "<1" : Math.round(d)} mi ${compass(lat, lon)}`; };
 const paras = t => String(t || "").replace(/\r/g, "").split(/\n\s*\n/).map(x => x.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
 
-/* ---------- NWS alerts (weather and civil emergencies) ---------- */
+/* ---------- Local news: human-caused incidents (GDELT, last 36 hours) ---------- */
+const NEWS_PLACES = ['"Salt Lake"', '"West Valley"', '"West Jordan"', '"South Jordan"', "Taylorsville", "Millcreek", "Herriman",
+  '"Cottonwood Heights"', "Holladay", "Midvale", "Kearns", "Magna", "Draper", "Murray", "Sandy", "Riverton"];
+const NEWS_TERMS = ["shooting", "gunfire", "stabbing", "stabbed", "homicide", "murder", "standoff", "barricaded", "SWAT", "lockdown",
+  "evacuation", "evacuated", '"bomb threat"', "explosion", "hazmat", "protest", "kidnapping", "abducted", '"Amber Alert"', "carjacking", "manhunt"];
+function newsUrl(){
+  const q = `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`;
+  return "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
+    "&mode=artlist&format=json&maxrecords=250&timespan=36h&sort=DateDesc";
+}
+/* First matching rule wins: [label, headline pattern, level while fresh]. */
+const NEWS_RULES = [
+  ["Active shooter", /active shooter/i, 3],
+  ["Child abduction", /amber alert|abduct|kidnap/i, 2],
+  ["Explosive threat", /\bbomb\b(?!\s+cyclone)|explosive device|suspicious (package|device|item)/i, 2],
+  ["Manhunt", /manhunt|still at large|remains at large|on the run/i, 2],
+  ["Police standoff", /standoff|barricad|\bswat\b/i, 2],
+  ["Lockdown", /lockdown|locked down|lock-down|shelter[- ]in[- ]place|hold[- ]in[- ]place/i, 2],
+  ["Evacuation", /evacuat/i, 2],
+  ["Hazmat", /hazmat|hazardous material|chemical (leak|spill)|gas leak/i, 2],
+  ["Explosion", /explosion|exploded/i, 2],
+  ["Police shooting", /officer-involved|police shooting|officers? shot|shot by police/i, 1],
+  ["Shooting", /shooting|shots fired|gunfire|gunman|fatally shot|shot and killed|shot dead|\b(was|were|is|gets|man|woman|teen|boy|girl|person|people|\d+) shot\b/i, 1],
+  ["Stabbing", /stabb/i, 1],
+  ["Homicide", /homicide|murder|slain|manslaughter/i, 1],
+  ["Robbery", /carjack|armed robbery/i, 1],
+  ["Protest", /protest|demonstrators|\briot|unrest/i, 1]
+];
+const SL_PLACES = ["Salt Lake City", "Salt Lake County", "South Salt Lake", "West Valley City", "West Valley", "West Jordan", "South Jordan",
+  "Taylorsville", "Millcreek", "Herriman", "Cottonwood Heights", "Holladay", "Midvale", "Bluffdale", "Riverton", "Draper", "Murray",
+  "Kearns", "Magna", "Sandy", "Copperton", "Emigration Canyon", "Big Cottonwood", "Little Cottonwood", "Alta",
+  "Rose Park", "Sugar House", "University of Utah", "Salt Lake"];
+const PLACE_SRC = "\\b(" + [...SL_PLACES].sort((a, b) => b.length - a.length).map(p => p.replace(/ /g, "\\s+")).join("|") + ")\\b(?!\\s+Hook)";
+const PLACE_RE = new RegExp(PLACE_SRC, "i"), PLACE_ALL = new RegExp(PLACE_SRC, "gi");
+const GENERIC = new Set(["Salt Lake City", "Salt Lake County", "Salt Lake"]);
+/* Headlines without a county place name are kept only from local outlets, and only if they name nowhere else. */
+const OTHER_UT = /\b(Ogden|Provo|Orem|Lehi|St\.? George|Logan|Layton|Bountiful|Kaysville|Clearfield|Roy|Tooele|Park City|Heber|Spanish Fork|American Fork|Pleasant Grove|Eagle Mountain|Saratoga Springs|Springville|Payson|Cedar City|Moab|Vernal|Price|Richfield|Riverdale|Syracuse|Farmington|Centerville|Brigham City|Kamas|Weber County|Davis County|Utah County|Washington County|Cache County|Summit County|Tooele County|Box Elder|Iron County|Uintah)\b/i;
+const ELSEWHERE = /\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Vermont|Virginia|Wisconsin|Wyoming|Chicago|Los Angeles|Denver|Phoenix|Las Vegas|Boise|Seattle|Houston|Dallas|Atlanta|Miami|Philadelphia|Boston|Minneapolis|Detroit|nationwide|Israel|Gaza|Ukraine|Russia|Mexico|Canada|China|Iran|Syria|Germany|France|London|Britain|Europe)\b/i;
+/* Sports, entertainment, court and legislative stories aren't live incidents. */
+const NOT_LIVE = /\b(Jazz|Utes|BYU|Cougars|Mammoth|RSL|Real Salt Lake|Royals|Bees|NBA|WNBA|NFL|NHL|MLS|basketball|football|hockey|soccer|baseball|playoffs?|season|coach|quarterback|film|movie|obituary|sentenced|sentencing|trial|convicted|pleads?|pleaded|guilty|jury|verdict|parole|cold case|anniversary|years? (ago|after|later)|lawsuit|sues|settlement|lawmakers|legislat\w*)\b/i;
+const SKIP_PATH = /\/(sports|opinion|entertainment|lifestyle|national-news|national|nation-world|nation|world|us-world|u-s-world|international)\//i;
+const OUTLETS = {"ksl.com": "KSL", "ksltv.com": "KSL TV", "kslnewsradio.com": "KSL NewsRadio", "sltrib.com": "Salt Lake Tribune", "deseret.com": "Deseret News",
+  "fox13now.com": "FOX 13", "kutv.com": "KUTV", "abc4.com": "ABC4", "gephardtdaily.com": "Gephardt Daily", "utahnewsdispatch.com": "Utah News Dispatch",
+  "kuer.org": "KUER", "cityweekly.net": "City Weekly", "standard.net": "Standard-Examiner", "heraldextra.com": "Daily Herald"};
+const LOCAL = Object.keys(OUTLETS);
+const localKey = d => LOCAL.find(x => d === x || d.endsWith("." + x));
+const outlet = d => { const k = localKey(d); return k ? OUTLETS[k] : d.replace(/^www\./, ""); };
+const cleanTitle = t => String(t || "").replace(/\s+/g, " ").replace(/\s+\|\s+[^|]{2,60}$/, "")
+  .replace(/\s+[-–—]\s+(KSL|Deseret|The Salt Lake Tribune|Salt Lake Tribune|FOX ?13|KUTV|ABC ?4|Gephardt|KUER|City Weekly|Standard-Examiner|Daily Herald|Utah News Dispatch|[\w.]+\.(com|org|net))[^–—|]*$/i, "").trim();
+function placeIn(t){
+  const m = PLACE_RE.exec(t), k = m ? m[1].replace(/\s+/g, " ").toLowerCase() : "";
+  return m ? SL_PLACES.find(p => p.toLowerCase() === k) || m[1] : "";
+}
+const STOP = new Set(("says said after with from that this into over near their they them were have been will what when where about more than " +
+  "police officers officer utah county city update updated breaking video watch live shot shooting killed dead dies died death injured hurt " +
+  "suspect suspects arrested arrest investigate investigating investigation").split(" "));
+const words = t => new Set((t.replace(PLACE_ALL, " ").toLowerCase().match(/[a-z]{4,}/g) || []).filter(w => !STOP.has(w)));
+/* Two headlines describe the same incident if they share a category and either the same town within 12 hours or most distinctive words. */
+function same(a, b){
+  if (a.rule !== b.rule) return false;
+  const specific = p => p && !GENERIC.has(p);
+  if (specific(a.place) && specific(b.place)) return a.place === b.place && Math.abs(a.t - b.t) < 12 * 3.6e6;
+  let n = 0; a.w.forEach(x => { if (b.w.has(x)) n++; });
+  return n >= 2 && n / Math.max(1, Math.min(a.w.size, b.w.size)) >= 0.5;
+}
+function gdeltTime(s){
+  const m = /^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/.exec(s || "");
+  return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : NaN;
+}
+function parseNews(j){
+  if (!j || typeof j !== "object") throw new Error("unexpected response");
+  const kept = [];
+  for (const a of Array.isArray(j.articles) ? j.articles : []){
+    const title = cleanTitle(a.title);
+    const url = String(a.url || "").replace(/^http:\/\//i, "https://"), dom = String(a.domain || "").toLowerCase();
+    if (!title || !/^https:\/\//.test(url) || SKIP_PATH.test(url) || NOT_LIVE.test(title)) continue;
+    const rule = NEWS_RULES.find(r => r[1].test(title));
+    if (!rule) continue;
+    const place = placeIn(title);
+    if (!place && (!localKey(dom) || OTHER_UT.test(title) || ELSEWHERE.test(title))) continue;
+    const c = {title, url, t: gdeltTime(a.seendate), w: words(title), rule, place, outlets: [outlet(dom)]};
+    const dup = kept.find(k => same(k, c));
+    if (dup){ if (!dup.outlets.includes(c.outlets[0])) dup.outlets.push(c.outlets[0]); continue; }
+    kept.push(c);
+  }
+  return kept.map(k => {
+    const fresh = Date.now() - k.t < 12 * 3.6e6;
+    const more = k.outlets.length > 1 ? ` +${k.outlets.length - 1}` : "";
+    return {id: "news:" + k.url, tab: "safety", level: fresh ? k.rule[2] : 1, time: k.t,
+      title: k.title, meta: [k.rule[0], k.place || "Utah", isFinite(k.t) ? ago(k.t) : "", k.outlets[0] + more].filter(Boolean).join(" · "),
+      detail: [
+        {p: k.title, lead: true},
+        {p: `${k.rule[0]}${k.place ? " · " + k.place : ""}. Reported ${isFinite(k.t) ? stamp(k.t) : "recently"} by ${join(k.outlets)}.`},
+        {small: "Headlines from local news outlets matched by keyword through the GDELT Project. The location shown comes from the headline; open the article for details."}
+      ], link: k.url, linkLabel: "article"};
+  });
+}
+
+/* ---------- NWS alerts (emergency messages go to Safety, the rest to Weather) ---------- */
+const CIVIL = /Civil|Law Enforcement|Shelter In Place|Evacuation|Hazardous Materials|Child Abduction|Blue Alert|911 Telephone|Local Area Emergency|Radiological|Nuclear/i;
 const CRITICAL = /Emergency|Evacuation|Shelter In Place|Civil Danger|Hazardous Materials|Law Enforcement|Radiological|Nuclear|Child Abduction|Blue Alert|Tornado Warning/i;
 function nwsLevel(p){
   if (p.severity === "Extreme" || CRITICAL.test(p.event || "")) return 3;
@@ -206,7 +323,8 @@ function parseNws(j){
     const todo = paras(p.instruction);
     if (todo.length){ detail.push({k: "What to do"}); todo.forEach(t => detail.push({p: t})); }
     detail.push({small: `${p.senderName || "National Weather Service"} · issued ${stamp(Date.parse(p.sent || p.effective || ""))}`});
-    return {id: "nws:" + p.id, level: nwsLevel(p), time: Date.parse(p.onset || p.sent || "") || now,
+    return {id: "nws:" + p.id, tab: CIVIL.test(p.event || "") ? "safety" : "weather", level: nwsLevel(p),
+      time: Date.parse(p.onset || p.sent || "") || now,
       title: p.event || "Alert", meta: `${timing(p)} · ${coverage(ugc)}`, detail, link: NWS_PAGE, linkLabel: "weather.gov"};
   });
 }
@@ -327,21 +445,32 @@ function parseAir(j){
 }
 
 /* ---------- state, rendering ---------- */
-const state = {tab: "now", items: {}, failed: new Set(), busy: false, first: true, checked: 0, view: []};
+const state = {tab: "now", items: {}, src: {}, busy: false, checked: 0, view: [], sheetView: []};
 try { const t = localStorage.getItem("slcw-tab"); if (SCOPE[t]) state.tab = t; } catch (e) {}
 
 const all = () => Object.values(state.items).flat();
 const forTab = tab => all().filter(i => tab === "now" || i.tab === tab).sort((a, b) => b.level - a.level || (b.time || 0) - (a.time || 0));
+const known = s => !!state.src[s.key] && state.src[s.key].ok !== undefined;   // has answered at least once
+const isDown = s => known(s) && !state.src[s.key].ok;
 const LEVEL_COLOR = ["var(--line)", "var(--sev1)", "var(--sev2)", "var(--sev3)"];
 const card = (it, i) => `<li><button class="item l${it.level}" type="button" data-i="${i}"><span class="tx"><span class="t">${esc(it.title)}</span><span class="m">${esc(it.meta)}</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></li>`;
 
+function renderStatus(dn, wait){
+  const n = SOURCES.length, at = state.checked ? " · " + clock(state.checked) : "";
+  $("#status").className = wait ? "" : dn.length ? "down" : "up";
+  $("#stext").textContent = wait ? `Checking sources… ${n - wait} of ${n}`
+    : !dn.length ? `All ${n} sources up${at}`
+    : dn.length === n ? `All sources down${at}`
+    : `${dn.length} down: ${dn.map(s => s.short).join(", ")}${at}`;
+}
+
 function render(){
   const items = all(), top = items.reduce((m, i) => Math.max(m, i.level), 0);
-  const allFailed = !state.first && state.failed.size === SOURCES.length;
+  const dn = SOURCES.filter(isDown), wait = SOURCES.filter(s => !known(s)).length;
   $("#dot").style.background = items.length ? LEVEL_COLOR[top] : "var(--line)";
-  $("#headline").textContent = state.first ? "Checking…" : items.length ? `${items.length} flagged` : allFailed ? "No connection" : "Nothing flagged";
-  $("#checked").textContent = state.checked ? clock(state.checked) : "";
+  $("#headline").textContent = items.length ? `${items.length} flagged` : wait ? "Checking…" : dn.length === SOURCES.length ? "No data" : "Nothing flagged";
   $("#refresh").classList.toggle("spin", state.busy);
+  renderStatus(dn, wait);
 
   document.querySelectorAll("#tabs button").forEach(b => {
     const t = b.dataset.tab, list = forTab(t);
@@ -356,17 +485,19 @@ function render(){
 
   const view = state.view = forTab(state.tab);
   $("#list").innerHTML = view.map(card).join("");
-  const srcs = SOURCES.filter(s => state.tab === "now" || s.tab === state.tab);
-  const failed = srcs.filter(s => state.failed.has(s.key));
-  const none = !state.first && failed.length === srcs.length;
+  const srcs = SOURCES.filter(s => state.tab === "now" || s.tabs.includes(state.tab));
+  const failed = srcs.filter(isDown), waiting = srcs.some(s => !known(s));
   $("#empty").hidden = view.length > 0;
   if (!view.length){
-    const whole = state.tab === "now";
-    $("#emptyTitle").textContent = state.first ? "Checking…" : none ? (whole ? "Couldn't load data" : `Couldn't load ${join(failed.map(s => s.name))}`) : "Nothing flagged";
-    $("#emptyText").textContent = state.first ? "" : none ? (whole ? "Check your connection, then tap refresh." : "The source didn't respond. Tap refresh to try again.") : SCOPE[state.tab];
+    const none = !waiting && failed.length === srcs.length;
+    $("#emptyTitle").textContent = waiting ? "Checking…" : none ? `Couldn't load ${state.tab === "now" ? "any source" : join(failed.map(s => s.name))}` : "Nothing flagged";
+    $("#emptyText").textContent = waiting ? ""
+      : none ? "Tap the source status at the top for details, then try refresh."
+      : failed.length ? `${cap(join(failed.map(s => s.name)))} didn't load, so this may be incomplete.`
+      : SCOPE[state.tab];
   }
-  $("#note").textContent = failed.length && !(none && !view.length) ? `Couldn't load ${join(failed.map(s => s.name))}.` : "";
   fit();
+  if (!$("#sheet").hidden && $("#panel .srcs")) openSources();   // keep an open source list current
 }
 
 /* Keep everything on one screen: hide the lowest-priority cards behind "+N more". */
@@ -388,31 +519,64 @@ function openDetail(it){
   const link = /^https:\/\//.test(it.link || "") ? `<a class="btn go" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">Open ${esc(it.linkLabel || "source")}</a>` : "";
   showSheet(`<h2>${esc(it.title)}</h2><div class="sub">${esc(it.meta)}</div>${blocks}<div class="row">${link}${CLOSE}</div>`);
 }
-function openAll(){ showSheet(`<h2>${esc(TITLES[state.tab])}</h2><ul class="cards">${state.view.map(card).join("")}</ul><div class="row">${CLOSE}</div>`); }
+function openAll(){
+  state.sheetView = state.view.slice();
+  showSheet(`<h2>${esc(TITLES[state.tab])}</h2><ul class="cards">${state.sheetView.map(card).join("")}</ul><div class="row">${CLOSE}</div>`);
+}
+function openSources(){
+  const rows = SOURCES.map(s => {
+    const st = state.src[s.key] || {}, wait = st.busy || st.ok === undefined;
+    const line = wait ? `Checking… · ${s.provider}`
+      : st.ok ? `Up · ${s.provider}`
+      : `Down: ${st.err}${st.okAt ? " · last worked " + when(st.okAt) : ""} · ${s.provider}`;
+    return `<li><i class="${wait ? "" : st.ok ? "up" : "down"}"></i><div><b>${esc(s.label)}</b><span>${esc(line)}</span></div></li>`;
+  }).join("");
+  const sub = state.busy ? "Checking now" : state.checked ? `Checked ${clock(state.checked)} · rechecks every 5 minutes while open` : "";
+  showSheet(`<h2>Sources</h2><div class="sub">${esc(sub)}</div><ul class="srcs">${rows}</ul><div class="row"><button class="btn go" type="button" data-recheck${state.busy ? " disabled" : ""}>${state.busy ? "Checking…" : "Check again"}</button>${CLOSE}</div>`);
+}
 
 /* ---------- fetching ---------- */
-async function getJSON(url, headers){
-  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+async function getJSON(url, ms){
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms || 15000);
+  let text;
   try {
-    const r = await fetch(url, {signal: ctl.signal, cache: "no-store", headers: headers || {}});
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return await r.json();
+    const r = await fetch(url, {signal: ctl.signal, cache: "no-store"});
+    if (!r.ok) throw new Error(r.status === 429 ? "rate limited" : "HTTP " + r.status);
+    text = await r.text();
+  } catch (e) {
+    throw new Error(e.name === "AbortError" ? "timed out" : /^(HTTP|rate)/.test(e.message) ? e.message : "unreachable or blocked");
   } finally { clearTimeout(timer); }
+  if (!text.trim()) return {};
+  try { return JSON.parse(text); } catch (e) {}
+  // GDELT occasionally sends stray control characters or bad escapes inside titles
+  try { return JSON.parse(text.replace(/[\u0000-\u001f]+/g, " ").replace(/\\'/g, "'").replace(/\\(?!["\\\/bfnrtu])/g, "\\\\")); } catch (e) {}
+  throw new Error(/limit requests/i.test(text) ? "rate limited" : "unexpected response");
 }
 async function check(){
   if (state.busy) return;
-  state.busy = true; render();
-  await Promise.all(SOURCES.map(async s => {
+  state.busy = true;
+  const now = Date.now();
+  const run = SOURCES.filter(s => {
+    const st = state.src[s.key] || (state.src[s.key] = {});
+    if (s.gap && now - (st.tried || 0) < s.gap) return false;   // too soon to ask this provider again
+    st.busy = true; st.tried = now; return true;
+  });
+  render();
+  await Promise.all(run.map(async s => {
+    const st = state.src[s.key];
     try {
-      const items = s.parse(await getJSON(s.url(), s.headers));
-      items.forEach(i => { i.tab = s.tab; });
-      state.items[s.key] = items; state.failed.delete(s.key);
+      const items = s.parse(await getJSON(s.url(), s.wait));
+      items.forEach(i => { if (!i.tab) i.tab = s.tabs[0]; });
+      state.items[s.key] = items;
+      Object.assign(st, {ok: true, okAt: Date.now(), err: ""});
     } catch (err) {
-      state.failed.add(s.key);               // keep the last good results for this source
-      console.warn(s.name, err);
+      Object.assign(st, {ok: false, err: err.message || "failed"});  // keep the last good results for this source
+      console.warn(s.label, err);
     }
+    st.busy = false;
+    render();   // show each source as soon as it answers
   }));
-  state.busy = false; state.first = false; state.checked = Date.now();
+  state.busy = false; state.checked = Date.now();
   render();
 }
 
@@ -421,8 +585,10 @@ document.addEventListener("click", e => {
   const tab = e.target.closest("#tabs button");
   if (tab){ state.tab = tab.dataset.tab; try { localStorage.setItem("slcw-tab", state.tab); } catch (err) {} render(); return; }
   const item = e.target.closest(".item");
-  if (item){ const it = state.view[+item.dataset.i]; if (it) openDetail(it); return; }
+  if (item){ const it = (item.closest("#panel") ? state.sheetView : state.view)[+item.dataset.i]; if (it) openDetail(it); return; }
   if (e.target.closest("#more")){ openAll(); return; }
+  if (e.target.closest("#status")){ openSources(); return; }
+  if (e.target.closest("[data-recheck]")){ check(); return; }
   if (e.target.closest("#refresh")){ check(); return; }
   if (e.target.closest("[data-close]") || e.target.id === "sheet") closeSheet();
 });
