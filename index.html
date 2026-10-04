@@ -33,10 +33,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cu
 .app{position:fixed;inset:0;max-width:560px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 /* Home-screen app: iOS can report a viewport that stops short of the home-indicator area, leaving a strip under
    the tab bar. Size to the full screen there, and paint anything left over in the tab bar's color. */
-@media (display-mode: standalone){
-  html{background:var(--surface)}
-  .app{bottom:auto;height:100vh;height:100lvh}
-}
+html.app-mode{background:var(--surface)}
+html.app-mode .app{bottom:auto;height:100vh;height:100lvh}
 header{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 10px;border-bottom:1px solid var(--line)}
 .hd{flex:1;min-width:0}
 h1{margin:0;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
@@ -138,6 +136,7 @@ nav button[aria-selected="true"]{color:var(--accent)}
 
 <script>
 "use strict";
+if (navigator.standalone === true || matchMedia("(display-mode: standalone)").matches) document.documentElement.classList.add("app-mode");
 /* Everything below runs in your browser. Each source is fetched directly when the page opens,
    then every 5 minutes while it stays open. Only out-of-the-ordinary items are shown. */
 const HOME = {lat: 40.7608, lon: -111.891};          // downtown Salt Lake City
@@ -275,6 +274,7 @@ const OTHER_UT = /\b(Ogden|Provo|Orem|Lehi|St\.? George|Logan|Layton|Bountiful|K
 const ELSEWHERE = /\b(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Vermont|Virginia|Wisconsin|Wyoming|Chicago|Los Angeles|Denver|Phoenix|Las Vegas|Boise|Seattle|Houston|Dallas|Atlanta|Miami|Philadelphia|Boston|Minneapolis|Detroit|nationwide|Israel|Gaza|Ukraine|Russia|Mexico|Canada|China|Iran|Syria|Germany|France|London|Britain|Europe)\b/i;
 /* Sports, entertainment, court and policy stories aren't live incidents. */
 const SPORTS = /\b(Jazz|Utes|BYU|Cougars|Mammoth|RSL|Real Salt Lake|Royals|Bees|NBA|WNBA|NFL|NHL|MLS|basketball|football|hockey|soccer|baseball|playoffs?|season|coach|quarterback|film|movie|obituary)\b/i;
+const ACCIDENT = /\b(accidental(ly)?|hunter|hunting|self-inflicted|misfire[sd]?|unintentional(ly)?)\b/i;
 const COURT = /\b(sentenced|sentencing|trial|convicted|pleads?|pleaded|guilty|jury|verdict|parole|cold case|anniversary|years? (ago|after|later)|lawsuit|sues|settlement|lawmakers|legislat\w*)\b/i;
 const SKIP_PATH = /\/(sports|opinion|entertainment|lifestyle|national-news|national|nation-world|nation|world|us-world|u-s-world|international)\//i;
 const OUTLETS = {"ksl.com": "KSL", "ksltv.com": "KSL TV", "kslnewsradio.com": "KSL NewsRadio", "sltrib.com": "Salt Lake Tribune", "deseret.com": "Deseret News",
@@ -318,11 +318,12 @@ function newsItems(list){
     const why = SKIP_PATH.test(url) ? "National or opinion section"
       : SPORTS.test(title) ? "Sports or entertainment"
       : COURT.test(title) ? "Court or policy story"
+      : ACCIDENT.test(title + " " + text) ? "Accident, not a threat"
       : !rule ? "No incident words"
       : place ? ""
-      : !localKey(dom) ? "Not clearly local"
       : OTHER_UT.test(title + " " + text) ? "Elsewhere in Utah"
-      : ELSEWHERE.test(title) ? "Outside Utah" : "";
+      : ELSEWHERE.test(title + " " + text) ? "Outside Utah"
+      : "No Salt Lake County place named";
     if (why){
       if (!seen.has(c.key)){ seen.add(c.key); (rule ? near : other).push(Object.assign(c, {why})); }
       continue;
@@ -338,7 +339,7 @@ function newsItems(list){
     const fresh = Date.now() - k.t < 12 * 3.6e6;
     const more = k.outlets.length > 1 ? ` +${k.outlets.length - 1}` : "";
     return Object.assign({id: "news:" + k.key, tab: "safety", level: fresh ? k.rule[2] : 1, time: k.t,
-      title: k.title, meta: [k.rule[0], k.place || "Utah", ago(k.t), k.outlets[0] + more].join(" · "),
+      title: k.title, meta: [k.rule[0], k.place, ago(k.t), k.outlets[0] + more].join(" · "),
       detail: [
         {p: k.title, lead: true},
         {p: `${k.rule[0]}${k.place ? " · " + k.place : ""}. Posted ${stamp(k.t)} by ${join(k.outlets)}.`},
@@ -732,7 +733,7 @@ async function check(){
 }
 
 /* ---------- debug report (Sources → Debug info) ---------- */
-const BUILD = "2026-10-04 20:27Z 702cdab";
+const BUILD = "2026-10-04 22:22Z 62e4d0c";
 const dbg = {log: [], errors: [], opened: Date.now(), checks: 0};
 const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
 function note(tag, kind, t0, result){
