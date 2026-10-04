@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Salt Lake County Watch</title>
+<meta name="description" content="What's out of the ordinary in Salt Lake County, Utah: official alerts, earthquakes, wildfires, air quality and space weather, checked live.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SLCo Watch">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#eef2f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1115" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%230c1115"/%3E%3Ccircle cx="32" cy="32" r="22.5" fill="none" stroke="%2326444d" stroke-width="2.5"/%3E%3Ccircle cx="32" cy="32" r="15" fill="none" stroke="%234cc3cc" stroke-width="3.2"/%3E%3Ccircle cx="32" cy="32" r="6" fill="%23ff8c42"/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#eef2f1;--surface:#fff;--ink:#0f191e;--ink2:#43535b;--muted:#6c7c84;--line:#d6dedb;--press:#e4ebe8;
+  --accent:#0a6a73;--on-accent:#fff;--sev3:#d42a31;--sev2:#e35d0b;--sev1:#d19300;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0c1115;--surface:#151d22;--ink:#e8eff1;--ink2:#a5b4ba;--muted:#71838a;--line:#25333b;--press:#1d2830;
+    --accent:#4cc3cc;--on-accent:#06262a;--sev3:#ff5c61;--sev2:#ff8c42;--sev1:#ffc53d;color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{position:fixed;inset:0;max-width:560px;margin:0 auto;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+header{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;border-bottom:1px solid var(--line)}
+.hd{flex:1;min-width:0}
+h1{margin:0;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.state{display:flex;align-items:baseline;gap:8px;margin-top:5px;font-size:21px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none;align-self:center}
+.state small{font:500 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:0}
+#refresh{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--ink2)}
+#refresh svg{width:18px;height:18px}
+#refresh.spin svg{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#refresh.spin svg{animation:none}}
+
+main{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:12px 16px}
+.cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px 11px 17px;box-shadow:inset 5px 0 0 var(--c,var(--muted))}
+.item.l3{--c:var(--sev3)}.item.l2{--c:var(--sev2)}.item.l1{--c:var(--sev1)}
+.item:active{background:var(--press)}
+.tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.t{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m{font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{width:16px;height:16px;flex:none;color:var(--muted)}
+#more{align-self:flex-start;padding:4px 2px;font-size:14px;font-weight:650;color:var(--accent)}
+.empty{margin:auto 0;text-align:center}
+.empty b{display:block;font-size:18px}
+.empty span{display:block;max-width:30ch;margin:6px auto 0;font-size:13.5px;color:var(--muted)}
+#note{margin:0;font-size:12.5px;color:var(--muted)}
+
+nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(env(safe-area-inset-bottom,0px) + 6px)}
+nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0 4px;border-radius:10px;color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+nav button svg{width:22px;height:22px}
+nav button[aria-selected="true"]{color:var(--accent)}
+.badge{position:absolute;top:0;left:calc(50% + 5px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;border:2px solid var(--surface);font:700 11px/14px system-ui,-apple-system,sans-serif;letter-spacing:0;color:#fff;text-align:center}
+.badge.l3{background:var(--sev3)}.badge.l2{background:var(--sev2)}.badge.l1{background:var(--sev1);color:#2a1c00}
+
+.sheet{position:fixed;inset:0;z-index:9;display:flex;align-items:flex-end;justify-content:center;background:rgba(4,9,11,.55)}
+.panel{width:100%;max-width:560px;max-height:86%;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+.panel h2{margin:0;font-size:20px;line-height:1.25}
+.panel .sub{margin-top:4px;font-size:14px;color:var(--ink2)}
+.panel p{margin:12px 0 0;font-size:15px;line-height:1.5;color:var(--ink2)}
+.panel p.lead{color:var(--ink);font-weight:600}
+.panel p.small{font-size:12.5px;color:var(--muted)}
+.panel .k{margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.panel .cards{margin-top:14px}
+.row{display:flex;gap:8px;margin-top:20px}
+.btn{flex:1;display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid var(--line);font-weight:650;font-size:15px;color:var(--ink);text-decoration:none}
+.btn.go{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="hd">
+      <h1>Salt Lake County Watch</h1>
+      <div class="state" aria-live="polite"><i class="dot" id="dot"></i><span id="headline">Checking…</span><small id="checked"></small></div>
+    </div>
+    <button id="refresh" type="button" aria-label="Check again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg></button>
+  </header>
+
+  <main id="main">
+    <ul class="cards" id="list"></ul>
+    <button id="more" type="button" hidden></button>
+    <div class="empty" id="empty" hidden><b id="emptyTitle"></b><span id="emptyText"></span></div>
+    <p id="note"></p>
+  </main>
+
+  <nav id="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" data-tab="now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/></svg>Now</button>
+    <button type="button" role="tab" data-tab="alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 2.5 20h19L12 3.5z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>Alerts</button>
+    <button type="button" role="tab" data-tab="quakes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2.5-6 4 13 3-9 2 3H22"/></svg>Quakes</button>
+    <button type="button" role="tab" data-tab="fire"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c4 0 7-2.8 7-6.8 0-3.3-2-5.6-4-8.2-.8 2.3-2 3.4-3.2 3.6C12 7.4 10.8 4.6 8.6 2.8 8.5 7.6 5 9.4 5 15.2 5 19.2 8 22 12 22z"/></svg>Fire</button>
+    <button type="button" role="tab" data-tab="air"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5h10.5a3 3 0 1 0-3-3M3 12.5h15a3 3 0 1 1-3 3M3 16.5h7"/></svg>Air</button>
+  </nav>
+</div>
+
+<div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true" aria-label="Details"></div></div>
+
+<script>
+"use strict";
+/* Everything below runs in your browser. Each source is fetched directly when the page opens,
+   then every 5 minutes while it stays open. Only out-of-the-ordinary items are shown. */
+const HOME = {lat: 40.7608, lon: -111.891};          // downtown Salt Lake City
+const TZ = "America/Denver";
+const COUNTY_SAME = "049035";                        // Salt Lake County
+const ZONES = new Set(["UTZ105", "UTZ111", "UTZ478", "UTC035"]); // valley, Wasatch south of I-80, fire-weather zone, county
+const RADIUS_MI = 60;
+const NWS_PAGE = "https://forecast.weather.gov/showsigwx.php?warnzone=UTZ105&warncounty=UTC035&firewxzone=UTZ478&local_place1=Salt+Lake+City+UT";
+
+const SOURCES = [
+  {key: "nws", tab: "alerts", name: "NWS alerts", headers: {Accept: "application/geo+json"},
+   url: () => "https://api.weather.gov/alerts/active?area=UT", parse: parseNws},
+  {key: "space", tab: "alerts", name: "space weather",
+   url: () => "https://services.swpc.noaa.gov/products/noaa-scales.json", parse: parseSpace},
+  {key: "quakes", tab: "quakes", name: "earthquakes", url: quakeUrl, parse: parseQuakes},
+  {key: "fire", tab: "fire", name: "wildfires", url: fireUrl, parse: parseFires},
+  {key: "air", tab: "air", name: "air quality", url: airUrl, parse: parseAir}
+];
+const SCOPE = {
+  now: "Watching official alerts, earthquakes, wildfires, air quality and space weather.",
+  alerts: "Watching NWS warnings, watches and advisories for the county, and strong space weather.",
+  quakes: "Watching for magnitude 2.5+ within 60 miles over the past 7 days.",
+  fire: "Watching for active wildfires within 60 miles.",
+  air: "Watching for unhealthy air now or in the next 24 hours."
+};
+const TITLES = {now: "Everything flagged", alerts: "Alerts", quakes: "Earthquakes", fire: "Wildfires", air: "Air quality"};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"};
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ESC[c]);
+const fmt = (ms, o) => isFinite(ms) ? new Intl.DateTimeFormat("en-US", Object.assign({timeZone: TZ}, o)).format(new Date(ms)) : "";
+const dayKey = ms => fmt(ms, {year: "numeric", month: "2-digit", day: "2-digit"});
+const clock = ms => fmt(ms, {hour: "numeric", minute: "2-digit"}).replace(":00", "");
+const when = ms => !isFinite(ms) ? "" : dayKey(ms) === dayKey(Date.now()) ? clock(ms) : fmt(ms, {weekday: "short"}) + " " + clock(ms);
+const stamp = ms => fmt(ms, {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"});
+const join = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+function ago(ms){
+  const s = (Date.now() - ms) / 1000;
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " hr ago";
+  const d = Math.round(s / 86400);
+  return d + (d === 1 ? " day ago" : " days ago");
+}
+const rad = x => x * Math.PI / 180;
+function miles(lat, lon){
+  const a = Math.sin(rad(lat - HOME.lat) / 2) ** 2 + Math.cos(rad(HOME.lat)) * Math.cos(rad(lat)) * Math.sin(rad(lon - HOME.lon) / 2) ** 2;
+  return 7917.6 * Math.asin(Math.sqrt(a));
+}
+function compass(lat, lon){
+  const y = Math.sin(rad(lon - HOME.lon)) * Math.cos(rad(lat));
+  const x = Math.cos(rad(HOME.lat)) * Math.sin(rad(lat)) - Math.sin(rad(HOME.lat)) * Math.cos(rad(lat)) * Math.cos(rad(lon - HOME.lon));
+  return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360 / 45) % 8];
+}
+const away = (lat, lon) => { const d = miles(lat, lon); return `${d < 1 ? "<1" : Math.round(d)} mi ${compass(lat, lon)}`; };
+const paras = t => String(t || "").replace(/\r/g, "").split(/\n\s*\n/).map(x => x.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
+
+/* ---------- NWS alerts (weather and civil emergencies) ---------- */
+const CRITICAL = /Emergency|Evacuation|Shelter In Place|Civil Danger|Hazardous Materials|Law Enforcement|Radiological|Nuclear|Child Abduction|Blue Alert|Tornado Warning/i;
+function nwsLevel(p){
+  if (p.severity === "Extreme" || CRITICAL.test(p.event || "")) return 3;
+  return /Warning/i.test(p.event || "") ? 2 : 1;
+}
+function coverage(ugc){
+  if (ugc.has("UTC035")) return "Salt Lake County";
+  const v = ugc.has("UTZ105") || ugc.has("UTZ478"), m = ugc.has("UTZ111") || ugc.has("UTZ110");
+  return v && m ? "Valley and mountains" : v ? "Salt Lake Valley" : m ? "Wasatch Mountains" : "Salt Lake County";
+}
+function timing(p){
+  const now = Date.now(), on = Date.parse(p.onset || p.effective || ""), end = Date.parse(p.ends || "") || Date.parse(p.expires || "");
+  if (on > now + 60e3) return `From ${when(on)}` + (end ? ` to ${when(end)}` : "");
+  return end ? `Until ${when(end)}` : "In effect";
+}
+function parseNws(j){
+  if (!j || !Array.isArray(j.features)) throw new Error("unexpected response");
+  const now = Date.now(), list = j.features.map(f => f.properties || {});
+  const replaced = new Set();
+  list.forEach(p => (p.references || []).forEach(r => r && r.identifier && replaced.add(r.identifier)));
+  const groups = new Map();
+  for (const p of list){
+    if (p.status !== "Actual" || p.messageType === "Cancel" || replaced.has(p.id)) continue;
+    const g = p.geocode || {}, ugc = g.UGC || [];
+    if (!((g.SAME || []).includes(COUNTY_SAME) || ugc.some(z => ZONES.has(z)))) continue;
+    const end = Date.parse(p.ends || "") || Date.parse(p.expires || "");
+    if (end && end < now) continue;
+    const key = (p.event || "") + "|" + (p.ends || p.expires || "");
+    const prev = groups.get(key);
+    if (prev) ugc.forEach(z => prev.ugc.add(z));
+    else groups.set(key, {p, ugc: new Set(ugc)});
+  }
+  return [...groups.values()].map(({p, ugc}) => {
+    const detail = [];
+    if (p.headline) detail.push({p: p.headline, lead: true});
+    paras(p.description).forEach(t => detail.push({p: t}));
+    const todo = paras(p.instruction);
+    if (todo.length){ detail.push({k: "What to do"}); todo.forEach(t => detail.push({p: t})); }
+    detail.push({small: `${p.senderName || "National Weather Service"} · issued ${stamp(Date.parse(p.sent || p.effective || ""))}`});
+    return {id: "nws:" + p.id, level: nwsLevel(p), time: Date.parse(p.onset || p.sent || "") || now,
+      title: p.event || "Alert", meta: `${timing(p)} · ${coverage(ugc)}`, detail, link: NWS_PAGE, linkLabel: "weather.gov"};
+  });
+}
+
+/* ---------- NOAA space weather: only strong events ---------- */
+const SW_NAME = {G: "geomagnetic storm", R: "radio blackout", S: "solar radiation storm"};
+const SW_EFFECT = {
+  G: "Strong geomagnetic storms can disrupt GPS accuracy, HF radio and power-grid operations.",
+  R: "Radio blackouts degrade HF radio and GPS on the sunlit side of Earth.",
+  S: "Solar radiation storms raise risk for satellites and high-altitude flights and degrade HF radio near the poles."
+};
+function parseSpace(j){
+  if (!j || !j["0"]) throw new Error("unexpected response");
+  const sc = (d, k) => Number(((d || {})[k] || {}).Scale) || 0, out = [], now = Date.now();
+  const cur = {G: sc(j["0"], "G"), R: sc(j["0"], "R"), S: sc(j["0"], "S")};
+  for (const k of ["G", "R", "S"]){
+    if (cur[k] < 2) continue;
+    out.push({id: "sw:" + k, level: cur[k] >= 4 ? 3 : cur[k] >= 3 ? 2 : 1, time: now,
+      title: `${k}${cur[k]} ${SW_NAME[k]} under way`, meta: "NOAA Space Weather Prediction Center",
+      detail: [{p: SW_EFFECT[k]}], link: "https://www.swpc.noaa.gov/", linkLabel: "NOAA SWPC"});
+  }
+  let fg = 0, fd = "";
+  for (const k of ["1", "2", "3"]){ const g = sc(j[k], "G"); if (g > fg){ fg = g; fd = (j[k] || {}).DateStamp || ""; } }
+  if (fg >= 3 && fg > cur.G){
+    out.push({id: "sw:fG", level: fg >= 4 ? 2 : 1, time: now, title: `G${fg} geomagnetic storm forecast`,
+      meta: `${fd ? fmt(Date.parse(fd + "T18:00:00Z"), {weekday: "long"}) : "Next 3 days"} · NOAA SWPC`,
+      detail: [{p: SW_EFFECT.G}], link: "https://www.swpc.noaa.gov/", linkLabel: "NOAA SWPC"});
+  }
+  return out;
+}
+
+/* ---------- USGS earthquakes ---------- */
+function quakeUrl(){
+  const start = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 19);
+  return "https://earthquake.usgs.gov/fdsnws/event/1/query?" + new URLSearchParams({
+    format: "geojson", latitude: HOME.lat, longitude: HOME.lon, maxradiuskm: "97",
+    minmagnitude: "2.5", eventtype: "earthquake", orderby: "time", starttime: start});
+}
+function parseQuakes(j){
+  if (!j || !Array.isArray(j.features)) throw new Error("unexpected response");
+  return j.features.map(f => {
+    const p = f.properties || {}, c = (f.geometry || {}).coordinates || [];
+    if (p.mag == null || c.length < 2) return null;
+    const m = Number(p.mag), near = String(p.place || "").replace(/, Utah$/, "").replace(/^.* of /, "");
+    const depth = c[2] != null ? `${Math.max(0, c[2] * 0.621).toFixed(1)} mi deep` : "";
+    return {id: "eq:" + f.id, level: m >= 4.5 ? 3 : m >= 3.5 ? 2 : 1, time: p.time,
+      title: `M${m.toFixed(1)} earthquake · ${away(c[1], c[0])}`,
+      meta: [ago(p.time), near ? "near " + near : "", p.felt ? `${p.felt} felt it` : ""].filter(Boolean).join(" · "),
+      detail: [
+        {p: `Magnitude ${m.toFixed(1)}${depth ? ", " + depth : ""}, ${away(c[1], c[0])} of downtown Salt Lake City${near ? " near " + near : ""}.`},
+        {p: `${fmt(p.time, {weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}.${p.felt ? ` ${p.felt} people reported feeling it.` : ""}`}
+      ], link: p.url, linkLabel: "USGS"};
+  }).filter(Boolean);
+}
+
+/* ---------- NIFC wildfires (WFIGS current incidents) ---------- */
+function fireUrl(){
+  return "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query?" + new URLSearchParams({
+    where: "IncidentTypeCategory='WF'", geometry: `${HOME.lon},${HOME.lat}`, geometryType: "esriGeometryPoint", inSR: "4326",
+    spatialRel: "esriSpatialRelIntersects", distance: String(RADIUS_MI), units: "esriSRUnit_StatuteMile",
+    outFields: "*", returnGeometry: "true", outSR: "4326", f: "json"});
+}
+const acres = v => v == null ? "" : (v < 10 ? Number(v).toFixed(1) : Math.round(v).toLocaleString("en-US")) + " acres";
+function parseFires(j){
+  if (j && j.error) throw new Error(j.error.message || "query failed");
+  if (!j || !Array.isArray(j.features)) throw new Error("unexpected response");
+  return j.features.map(f => {
+    const a = f.attributes || {}, g = f.geometry || {};
+    if (a.FireOutDateTime || a.PercentContained >= 100 || g.y == null) return null;
+    const d = miles(g.y, g.x), pc = a.PercentContained, name = String(a.IncidentName || "Unnamed").trim();
+    const county = a.POOCounty ? a.POOCounty + " County" : "";
+    return {id: "wf:" + (a.UniqueFireIdentifier || name), level: d <= 15 && !(pc >= 50) ? 3 : d <= 35 ? 2 : 1,
+      time: a.FireDiscoveryDateTime || 0,
+      title: `${/fire$/i.test(name) ? name : name + " Fire"} · ${away(g.y, g.x)}`,
+      meta: [acres(a.IncidentSize), pc != null ? pc + "% contained" : "", county].filter(Boolean).join(" · "),
+      detail: [
+        {p: `${acres(a.IncidentSize) || "Size not reported"}, ${pc != null ? pc + "% contained" : "containment not reported"}. ${away(g.y, g.x)} of downtown Salt Lake City${county ? ", in " + county : ""}.`},
+        {p: [a.FireDiscoveryDateTime ? "Discovered " + stamp(a.FireDiscoveryDateTime) : "", a.ModifiedOnDateTime_dt ? "updated " + stamp(a.ModifiedOnDateTime_dt) : ""].filter(Boolean).join(" · ")}
+      ].filter(b => b.p), link: "https://utahfireinfo.gov/", linkLabel: "Utah Fire Info"};
+  }).filter(Boolean);
+}
+
+/* ---------- Air quality (CAMS model via Open-Meteo) ---------- */
+function airUrl(){
+  return "https://air-quality-api.open-meteo.com/v1/air-quality?" + new URLSearchParams({
+    latitude: HOME.lat, longitude: HOME.lon, current: "us_aqi", hourly: "us_aqi,us_aqi_pm2_5,us_aqi_ozone",
+    timezone: TZ, forecast_days: "2"});
+}
+function localHour(ms){
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23"}).formatToParts(new Date(ms)).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:00`;
+}
+const AQI_CAT = [[301, "Hazardous air"], [201, "Very unhealthy air"], [151, "Unhealthy air"], [101, "Unhealthy air for sensitive groups"]];
+const aqiCat = v => (AQI_CAT.find(x => v >= x[0]) || [0, "Moderate air"])[1];
+function parseAir(j){
+  const h = (j && j.hourly) || {}, t = h.time || [], a = h.us_aqi || [];
+  if (!t.length) throw new Error("unexpected response");
+  const curT = (j.current && j.current.time) || localHour(Date.now());
+  let i0 = 0; t.forEach((x, i) => { if (x <= curT) i0 = i; });
+  let mi = -1;
+  for (let i = i0; i < Math.min(t.length, i0 + 25); i++) if (a[i] != null && (mi < 0 || a[i] > a[mi])) mi = i;
+  const now = (j.current && j.current.us_aqi != null) ? j.current.us_aqi : a[i0];
+  const peak = mi >= 0 ? a[mi] : null, top = Math.max(now ?? 0, peak ?? 0);
+  if (top < 101) return [];
+  const pol = i => (((h.us_aqi_ozone || [])[i] ?? 0) > ((h.us_aqi_pm2_5 || [])[i] ?? 0)) ? "ozone" : "fine particles (PM2.5)";
+  const at = s => { const hr = +s.slice(11, 13), lbl = (hr % 12 || 12) + (hr < 12 ? " AM" : " PM"); return s.slice(0, 10) === curT.slice(0, 10) ? lbl : lbl + " tomorrow"; };
+  const nowBad = (now ?? 0) >= 101;
+  const title = aqiCat(nowBad ? now : peak);
+  const meta = nowBad
+    ? `Now · AQI ${now} · ${pol(i0).split(" ")[0]}` + (peak > now ? ` · peak ${peak} around ${at(t[mi])}` : "")
+    : `Expected around ${at(t[mi])} · AQI ${peak} · ${pol(mi).split(" ")[0]}`;
+  return [{id: "air", level: top >= 201 ? 3 : top >= 151 ? 2 : 1, time: Date.now(), title, meta,
+    detail: [
+      {p: nowBad ? `Air quality index ${now} now, mainly from ${pol(i0)}.` : `Air quality index forecast to reach ${peak} around ${at(t[mi])}, mainly from ${pol(mi)}.`},
+      {p: "People with heart or lung conditions, older adults and children should cut back on long or heavy exertion outdoors while the index is above 100."},
+      {small: "Forecast from the Copernicus (CAMS) air quality model via Open-Meteo for downtown Salt Lake City. Utah DEQ has official readings and action days."}
+    ], link: "https://air.utah.gov/", linkLabel: "Utah DEQ"}];
+}
+
+/* ---------- state, rendering ---------- */
+const state = {tab: "now", items: {}, failed: new Set(), busy: false, first: true, checked: 0, view: []};
+try { const t = localStorage.getItem("slcw-tab"); if (SCOPE[t]) state.tab = t; } catch (e) {}
+
+const all = () => Object.values(state.items).flat();
+const forTab = tab => all().filter(i => tab === "now" || i.tab === tab).sort((a, b) => b.level - a.level || (b.time || 0) - (a.time || 0));
+const LEVEL_COLOR = ["var(--line)", "var(--sev1)", "var(--sev2)", "var(--sev3)"];
+const card = (it, i) => `<li><button class="item l${it.level}" type="button" data-i="${i}"><span class="tx"><span class="t">${esc(it.title)}</span><span class="m">${esc(it.meta)}</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></li>`;
+
+function render(){
+  const items = all(), top = items.reduce((m, i) => Math.max(m, i.level), 0);
+  const allFailed = !state.first && state.failed.size === SOURCES.length;
+  $("#dot").style.background = items.length ? LEVEL_COLOR[top] : "var(--line)";
+  $("#headline").textContent = state.first ? "Checking…" : items.length ? `${items.length} flagged` : allFailed ? "No connection" : "Nothing flagged";
+  $("#checked").textContent = state.checked ? clock(state.checked) : "";
+  $("#refresh").classList.toggle("spin", state.busy);
+
+  document.querySelectorAll("#tabs button").forEach(b => {
+    const t = b.dataset.tab, list = forTab(t);
+    b.setAttribute("aria-selected", String(t === state.tab));
+    let badge = b.querySelector(".badge");
+    if (t !== "now" && list.length){
+      if (!badge){ badge = document.createElement("span"); b.append(badge); }
+      badge.className = "badge l" + list[0].level;
+      badge.textContent = list.length;
+    } else if (badge) badge.remove();
+  });
+
+  const view = state.view = forTab(state.tab);
+  $("#list").innerHTML = view.map(card).join("");
+  const srcs = SOURCES.filter(s => state.tab === "now" || s.tab === state.tab);
+  const failed = srcs.filter(s => state.failed.has(s.key));
+  const none = !state.first && failed.length === srcs.length;
+  $("#empty").hidden = view.length > 0;
+  if (!view.length){
+    const whole = state.tab === "now";
+    $("#emptyTitle").textContent = state.first ? "Checking…" : none ? (whole ? "Couldn't load data" : `Couldn't load ${join(failed.map(s => s.name))}`) : "Nothing flagged";
+    $("#emptyText").textContent = state.first ? "" : none ? (whole ? "Check your connection, then tap refresh." : "The source didn't respond. Tap refresh to try again.") : SCOPE[state.tab];
+  }
+  $("#note").textContent = failed.length && !(none && !view.length) ? `Couldn't load ${join(failed.map(s => s.name))}.` : "";
+  fit();
+}
+
+/* Keep everything on one screen: hide the lowest-priority cards behind "+N more". */
+function fit(){
+  const main = $("#main"), more = $("#more"), cards = [...$("#list").children];
+  more.hidden = true;
+  let hidden = 0;
+  for (let i = cards.length - 1; i > 0 && main.scrollHeight > main.clientHeight + 1; i--){
+    cards[i].hidden = true; hidden++;
+    more.hidden = false; more.textContent = `+${hidden} more`;
+  }
+}
+
+function showSheet(html){ $("#panel").innerHTML = html; $("#sheet").hidden = false; $("#panel").scrollTop = 0; }
+const closeSheet = () => { $("#sheet").hidden = true; };
+const CLOSE = `<button class="btn" type="button" data-close>Close</button>`;
+function openDetail(it){
+  const blocks = (it.detail || []).map(b => b.k ? `<div class="k">${esc(b.k)}</div>` : b.small ? `<p class="small">${esc(b.small)}</p>` : `<p${b.lead ? ' class="lead"' : ""}>${esc(b.p)}</p>`).join("");
+  const link = /^https:\/\//.test(it.link || "") ? `<a class="btn go" href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">Open ${esc(it.linkLabel || "source")}</a>` : "";
+  showSheet(`<h2>${esc(it.title)}</h2><div class="sub">${esc(it.meta)}</div>${blocks}<div class="row">${link}${CLOSE}</div>`);
+}
+function openAll(){ showSheet(`<h2>${esc(TITLES[state.tab])}</h2><ul class="cards">${state.view.map(card).join("")}</ul><div class="row">${CLOSE}</div>`); }
+
+/* ---------- fetching ---------- */
+async function getJSON(url, headers){
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(url, {signal: ctl.signal, cache: "no-store", headers: headers || {}});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(timer); }
+}
+async function check(){
+  if (state.busy) return;
+  state.busy = true; render();
+  await Promise.all(SOURCES.map(async s => {
+    try {
+      const items = s.parse(await getJSON(s.url(), s.headers));
+      items.forEach(i => { i.tab = s.tab; });
+      state.items[s.key] = items; state.failed.delete(s.key);
+    } catch (err) {
+      state.failed.add(s.key);               // keep the last good results for this source
+      console.warn(s.name, err);
+    }
+  }));
+  state.busy = false; state.first = false; state.checked = Date.now();
+  render();
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  const tab = e.target.closest("#tabs button");
+  if (tab){ state.tab = tab.dataset.tab; try { localStorage.setItem("slcw-tab", state.tab); } catch (err) {} render(); return; }
+  const item = e.target.closest(".item");
+  if (item){ const it = state.view[+item.dataset.i]; if (it) openDetail(it); return; }
+  if (e.target.closest("#more")){ openAll(); return; }
+  if (e.target.closest("#refresh")){ check(); return; }
+  if (e.target.closest("[data-close]") || e.target.id === "sheet") closeSheet();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+let rz;
+addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 150); });
+setInterval(() => { if (document.visibilityState === "visible") check(); }, 5 * 60e3);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && Date.now() - state.checked > 2 * 60e3) check();
+});
+
+render();
+check();
+</script>
+</body>
+</html>
