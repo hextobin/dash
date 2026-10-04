@@ -192,12 +192,14 @@ const NEWS_TERMS = ["shooting", "gunfire", "stabbing", "stabbed", "homicide", "m
   "evacuation", "evacuated", '"bomb threat"', "explosion", "hazmat", "protest", "kidnapping", "abducted", '"Amber Alert"', "carjacking", "manhunt"];
 const NEWS_SITES = ["ksl.com", "kslnewsradio.com", "fox13now.com", "kutv.com", "abc4.com", "sltrib.com", "deseret.com", "gephardtdaily.com", "utahnewsdispatch.com", "kuer.org"];
 const NEWS_QUERY = {
-  // Salt Lake outlets only: precise, cheap for GDELT, and can't be crowded out by syndicated wire stories
-  local: `(${NEWS_SITES.map(d => "domain:" + d).join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`,
-  // Any outlet naming a county place: used if GDELT rejects the first query
-  places: `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`
+  // Newest stories from Salt Lake newsrooms, with no keywords: light for GDELT. Incidents are matched by headline on the phone.
+  sites: `(${NEWS_SITES.map(d => "domain:" + d).join(" OR ")})`,
+  // Any outlet naming a county place plus an incident word: used if GDELT rejects the first query
+  places: `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`,
+  // Newsrooms plus incident words: kept only for the debug test (it took GDELT ~9.5 s and failed on a phone)
+  local: `(${NEWS_SITES.map(d => "domain:" + d).join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`
 };
-let newsMode = "local", gdeltAt = 0, gdeltScript = false, gdeltQueue = Promise.resolve();
+let newsMode = "sites", gdeltAt = 0, gdeltScript = false, gdeltQueue = Promise.resolve();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const gdeltUrl = (q, format, max) => "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
   `&mode=artlist&format=${format}&maxrecords=${max || 250}&timespan=36h&sort=DateDesc`;
@@ -221,13 +223,15 @@ async function gdelt(mode){
     catch (e2) { throw e.message === "unreachable or blocked" ? e2 : e; }
   }
 }
+/* GDELT answered, but with a message instead of results (readable text, or a script reply that never called back). */
+const rejected = e => (e.reply && !/limit requests/i.test(e.reply)) || e.message === "sent an error instead of results";
 async function loadNews(){
-  if (newsMode === "local"){
+  if (newsMode === "sites"){
     let j = null;
-    try { j = await gdelt("local"); }
-    catch (e) { if (!e.reply || /limit requests/i.test(e.reply)) throw e; }   // GDELT answered with an error message: try the other query
+    try { j = await gdelt("sites"); }
+    catch (e) { if (!rejected(e)) throw e; }
     if (j && Array.isArray(j.articles) && j.articles.length) return parseNews(j);
-    newsMode = "places";   // rejected or empty (ten newsrooms always have some matching story), so switch for this session
+    newsMode = "places";   // rejected or empty (ten newsrooms always publish something in 36 hours), so switch for this visit
   }
   return parseNews(await gdelt("places"));
 }
@@ -651,7 +655,7 @@ async function check(){
 }
 
 /* ---------- debug report (Sources → Debug info) ---------- */
-const BUILD = "2026-10-04 19:23Z fb7ce43";
+const BUILD = "2026-10-04 19:45Z 092d1c3";
 const dbg = {log: [], errors: [], opened: Date.now(), checks: 0, test: null};
 const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
 function note(tag, kind, t0, result){
@@ -694,39 +698,44 @@ function updateDebug(){
   const top = pre.scrollTop;
   pre.textContent = debugReport();
   pre.scrollTop = top;
-  $("#dbgSub").textContent = dbg.test && dbg.test.running ? "Testing the news source, about 15 seconds…" : "Done. Tap Copy, then paste it into the chat.";
+  $("#dbgSub").textContent = dbg.test && dbg.test.running ? "Testing the news source, up to a minute…" : "Done. Tap Copy, then paste it into the chat.";
 }
-/* Ask GDELT three ways to tell "can't connect" from "answered but the page may not read it" from "works". */
+/* From this device: a minimal query read normally and as a script, to see whether GDELT lets pages read a plain reply.
+   Through a public relay (allorigins.win): the real queries, to see GDELT's actual status, timing and reply text from
+   outside this network. The relay is only used here, never for the dashboard itself. */
+const RELAY = "https://api.allorigins.win/get?url=";
 async function runTest(){
   if (dbg.test && dbg.test.running) return;
   const T = dbg.test = {running: true, lines: []}, add = x => { T.lines.push(x); updateDebug(); };
-  const q = NEWS_QUERY[newsMode], url = gdeltUrl(q, "json", 5);
   const timed = async fn => { const t0 = Date.now(); try { return [await fn(), Date.now() - t0]; } catch (e) { return [e, Date.now() - t0]; } };
-  const limit = () => { const c = new AbortController(); setTimeout(() => c.abort(), 15000); return c.signal; };
-  await gdeltTurn();
-  const [a, msA] = await timed(async () => {
-    const r = await fetch(url, {cache: "no-store", signal: limit()}), text = await r.text();
-    let what; try { what = count(JSON.parse(text)); } catch (e) { what = `reply "${snippet(text).slice(0, 90)}"`; }
-    return {ok: r.ok, line: `HTTP ${r.status} · ${r.headers.get("content-type") || "no type"} · ${what}`};
-  });
-  const aErr = a instanceof Error;
-  add(`A fetch    ${msA}ms  ${aErr ? a.name + ": " + a.message : a.line}`);
-  if (!aErr){
-    add(a.ok ? "→ GDELT answers and the page can read it right now." : "→ GDELT answered with an error status (see A).");
-    T.running = false; updateDebug(); return;
-  }
-  await gdeltTurn();
-  const [b, msB] = await timed(() => fetch(url, {mode: "no-cors", cache: "no-store", signal: limit()}));
-  const bOk = !(b instanceof Error);
-  add(`B no-cors  ${msB}ms  ${bOk ? "server answered (" + b.type + ")" : b.name + ": " + b.message}`);
-  await gdeltTurn();
-  const [c, msC] = await timed(() => jsonp(gdeltUrl(q, "jsonp", 5), 15000, "test"));
-  const cOk = !(c instanceof Error);
-  add(`C script   ${msC}ms  ${cOk ? "callback · " + count(c) : c.message}`);
-  if (cOk) gdeltScript = true;
-  add(!bOk ? "→ This device can't connect to GDELT at all (network, DNS, content blocker, or a block on this address)."
-    : cOk ? "→ GDELT answers, but in a form fetch can't read. The script format works, so the page now uses it."
-    : "→ GDELT answers but refuses or errors for this device or network (throttled or blocked).");
+  const limit = ms => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; };
+  const show = (r, ms) => `${String(ms).padStart(5)}ms  ${r instanceof Error ? (r.name === "Error" ? "" : r.name + ": ") + r.message : r}`;
+  const body = t => { try { return count(JSON.parse(t)); } catch (e) { return `reply "${snippet(t).slice(0, 160)}"`; } };
+  const direct = (async () => {
+    const one = q => gdeltUrl(q, "json", 5);
+    await gdeltTurn();
+    const [a, msA] = await timed(async () => {
+      const r = await fetch(one("domain:ksl.com"), {cache: "no-store", signal: limit(20000)}), t = await r.text();
+      return `HTTP ${r.status} · ${r.headers.get("content-type") || "no type"} · ${body(t)}`;
+    });
+    add(`D1 phone fetch  minimal query ${show(a, msA)}`);
+    await gdeltTurn();
+    const [b, msB] = await timed(() => jsonp(gdeltUrl("domain:ksl.com", "jsonp", 5), 20000, "test").then(j => "callback · " + count(j)));
+    add(`D2 phone script minimal query ${show(b, msB)}`);
+  })();
+  const relayed = (async () => {
+    for (const [name, q, max] of [["old query", NEWS_QUERY.local, 5], ["new query", NEWS_QUERY.sites, 250]]){
+      const [r, ms] = await timed(async () => {
+        const res = await fetch(RELAY + encodeURIComponent(gdeltUrl(q, "json", max)), {cache: "no-store", signal: limit(40000)});
+        if (!res.ok) throw new Error("relay HTTP " + res.status);
+        const j = await res.json(), st = j.status || {};
+        return `GDELT HTTP ${st.http_code ?? "?"} · ${st.content_type || "no type"}${st.response_time != null ? " · GDELT took " + st.response_time + "ms" : ""} · ${body(j.contents || "")}`;
+      });
+      add(`R  relay ${name.padEnd(13)}  ${show(r, ms)}`);
+      await sleep(5500);
+    }
+  })();
+  await Promise.all([direct, relayed]);
   T.running = false; updateDebug();
 }
 async function copyDebug(btn){
