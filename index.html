@@ -90,6 +90,8 @@ nav button[aria-selected="true"]{color:var(--accent)}
 .btn{flex:1;display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid var(--line);font-weight:650;font-size:15px;color:var(--ink);text-decoration:none}
 .btn.go{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .btn[disabled]{opacity:.55;cursor:default}
+.dbglink{display:block;margin:12px auto 0;padding:6px 10px;font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+#dbg{margin:12px 0 0;max-height:52vh;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}
 </style>
 </head>
 <body>
@@ -195,35 +197,39 @@ const NEWS_QUERY = {
   // Any outlet naming a county place: used if GDELT rejects the first query
   places: `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`
 };
-let newsMode = "local", gdeltAt = 0, gdeltScript = false;
+let newsMode = "local", gdeltAt = 0, gdeltScript = false, gdeltQueue = Promise.resolve();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const gdeltUrl = (q, format) => "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
-  `&mode=artlist&format=${format}&maxrecords=250&timespan=36h&sort=DateDesc`;
-async function gdelt(q){
-  const wait = gdeltAt + 5500 - Date.now();   // GDELT allows one request every 5 seconds
-  if (wait > 0) await sleep(wait);
-  gdeltAt = Date.now();
-  if (gdeltScript) return jsonp(gdeltUrl(q, "jsonp"), 25000);
-  try { return await getJSON(gdeltUrl(q, "json"), 25000); }
+const gdeltUrl = (q, format, max) => "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
+  `&mode=artlist&format=${format}&maxrecords=${max || 250}&timespan=36h&sort=DateDesc`;
+/* GDELT allows one request every 5 seconds. Every GDELT request waits its turn here, so they never overlap. */
+function gdeltTurn(){
+  const turn = gdeltQueue.then(async () => { const w = gdeltAt + 5500 - Date.now(); if (w > 0) await sleep(w); gdeltAt = Date.now(); });
+  gdeltQueue = turn.catch(() => {});
+  return turn;
+}
+async function gdelt(mode){
+  const q = NEWS_QUERY[mode], tag = "news/" + mode;
+  await gdeltTurn();
+  if (gdeltScript) return jsonp(gdeltUrl(q, "jsonp"), 25000, tag);
+  try { return await getJSON(gdeltUrl(q, "json"), 25000, tag); }
   catch (e) {
-    if (e.message !== "unreachable or blocked") throw e;
-    // The browser couldn't read GDELT's reply (often a busy or throttle reply without the header that lets pages read it).
-    // Wait out the limit and ask once more in GDELT's script format, which doesn't depend on that header.
-    await sleep(5500); gdeltAt = Date.now();
-    const j = await jsonp(gdeltUrl(q, "jsonp"), 25000);
-    gdeltScript = true;   // the script format works here, so use it directly for the rest of this visit
-    return j;
+    if (!/^(unreachable|rate limited|HTTP 5)/.test(e.message)) throw e;
+    // The browser couldn't read GDELT's reply, or GDELT was busy. Wait out the limit and ask once more in
+    // GDELT's script format (JSONP), which doesn't depend on the header that lets pages read a reply.
+    await gdeltTurn();
+    try { const j = await jsonp(gdeltUrl(q, "jsonp"), 25000, tag); gdeltScript = true; return j; }
+    catch (e2) { throw e.message === "unreachable or blocked" ? e2 : e; }
   }
 }
 async function loadNews(){
   if (newsMode === "local"){
     let j = null;
-    try { j = await gdelt(NEWS_QUERY.local); }
+    try { j = await gdelt("local"); }
     catch (e) { if (!e.reply || /limit requests/i.test(e.reply)) throw e; }   // GDELT answered with an error message: try the other query
     if (j && Array.isArray(j.articles) && j.articles.length) return parseNews(j);
     newsMode = "places";   // rejected or empty (ten newsrooms always have some matching story), so switch for this session
   }
-  return parseNews(await gdelt(NEWS_QUERY.places));
+  return parseNews(await gdelt("places"));
 }
 /* First matching rule wins: [label, headline pattern, level while fresh]. */
 const NEWS_RULES = [
@@ -529,6 +535,7 @@ function render(){
   }
   fit();
   if (!$("#sheet").hidden && $("#panel .srcs")) openSources();   // keep an open source list current
+  else updateDebug();                                             // or an open debug report
 }
 
 /* Keep everything on one screen: hide the lowest-priority cards behind "+N more". */
@@ -564,44 +571,56 @@ function openSources(){
   }).join("");
   const sub = state.busy ? "Checking now" : state.checked ? `Checked ${clock(state.checked)} · rechecks every 5 minutes while open` : "";
   const note = SOURCES.some(isDown) ? `<p class="small">A source marked down didn't answer in a usable way, usually because the provider is busy or limiting requests. The rest of the page still works, and it tries again on the next check.</p>` : "";
-  showSheet(`<h2>Sources</h2><div class="sub">${esc(sub)}</div><ul class="srcs">${rows}</ul>${note}<div class="row"><button class="btn go" type="button" data-recheck${state.busy ? " disabled" : ""}>${state.busy ? "Checking…" : "Check again"}</button>${CLOSE}</div>`);
+  showSheet(`<h2>Sources</h2><div class="sub">${esc(sub)}</div><ul class="srcs">${rows}</ul>${note}<div class="row"><button class="btn go" type="button" data-recheck${state.busy ? " disabled" : ""}>${state.busy ? "Checking…" : "Check again"}</button>${CLOSE}</div><button class="dbglink" type="button" data-debug>Debug info</button>`);
 }
 
-/* ---------- fetching ---------- */
-async function getJSON(url, ms){
-  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms || 15000);
-  let text;
+/* ---------- fetching (every request is noted for the debug report) ---------- */
+const kb = n => n < 1024 ? n + " B" : (n / 1024).toFixed(1) + " KB";
+const count = j => !j || typeof j !== "object" ? "no data" : Array.isArray(j.articles) ? j.articles.length + " articles"
+  : Array.isArray(j.features) ? j.features.length + " records" : Object.keys(j).length + " fields";
+const snippet = t => String(t).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+async function getJSON(url, ms, tag){
+  const t0 = Date.now(), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms || 15000);
+  let r, text;
   try {
-    const r = await fetch(url, {signal: ctl.signal, cache: "no-store"});
-    if (!r.ok) throw new Error(r.status === 429 ? "rate limited" : "HTTP " + r.status);
+    r = await fetch(url, {signal: ctl.signal, cache: "no-store"});
     text = await r.text();
   } catch (e) {
-    throw new Error(e.name === "AbortError" ? "timed out" : /^(HTTP|rate)/.test(e.message) ? e.message : "unreachable or blocked");
+    note(tag, "fetch", t0, `${e.name}: ${e.message}`);
+    if (e.name === "AbortError") throw new Error("timed out");
+    const code = /status code:?\s*(\d{3})/i.exec(e.message || "");   // Safari names the status when it blocks an unreadable reply
+    throw new Error(!code ? "unreachable or blocked" : code[1] === "429" ? "rate limited" : "HTTP " + code[1]);
   } finally { clearTimeout(timer); }
-  if (!text.trim()) return {};
-  try { return JSON.parse(text); } catch (e) {}
-  // GDELT occasionally sends stray control characters or bad escapes inside titles
-  try { return JSON.parse(text.replace(/[\u0000-\u001f]+/g, " ").replace(/\\'/g, "'").replace(/\\(?!["\\\/bfnrtu])/g, "\\\\")); } catch (e) {}
-  const reply = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  let j = null;
+  if (!text.trim()) j = {};
+  else try { j = JSON.parse(text); } catch (e) {
+    // GDELT occasionally sends stray control characters or bad escapes inside titles
+    try { j = JSON.parse(text.replace(/[\u0000-\u001f]+/g, " ").replace(/\\'/g, "'").replace(/\\(?!["\\\/bfnrtu])/g, "\\\\")); } catch (e2) {}
+  }
+  note(tag, "fetch", t0, `HTTP ${r.status} · ${r.headers.get("content-type") || "no type"} · ${kb(text.length)} · ` + (j ? count(j) : `reply "${snippet(text).slice(0, 90)}"`));
+  if (!r.ok) throw new Error(r.status === 429 ? "rate limited" : "HTTP " + r.status);
+  if (j) return j;
+  const reply = snippet(text);
   const err = new Error(/limit requests/i.test(reply) ? "rate limited" : `unexpected reply: "${reply.slice(0, 70)}"`);
   err.reply = reply;
   throw err;
 }
 /* Script-tag request (JSONP): works even when a reply lacks the header that lets pages read it with fetch. */
 let jsonpN = 0;
-function jsonp(url, ms){
+function jsonp(url, ms, tag){
   return new Promise((resolve, reject) => {
-    const cb = "slcwCb" + (++jsonpN) + Date.now().toString(36), s = document.createElement("script");
+    const t0 = Date.now(), cb = "slcwCb" + (++jsonpN) + t0.toString(36), s = document.createElement("script");
     let done = false, timer;
     const end = (err, data) => {
       if (done) return;
       done = true; clearTimeout(timer); s.remove();
       window[cb] = () => {};   // a late reply must not throw
+      note(tag, "script", t0, err || "callback · " + count(data));
       err ? reject(new Error(err)) : resolve(data && typeof data === "object" ? data : {});
     };
     timer = setTimeout(() => end("timed out"), ms);
     window[cb] = data => end(null, data);
-    s.onerror = () => end("unreachable or blocked");
+    s.onerror = () => end("unreachable or blocked");   // an HTTP error status, or no connection
     s.onload = () => setTimeout(() => end("sent an error instead of results"), 0);   // loaded but never called back
     s.referrerPolicy = "no-referrer";
     s.src = url + "&callback=" + cb;
@@ -610,13 +629,13 @@ function jsonp(url, ms){
 }
 async function check(){
   if (state.busy) return;
-  state.busy = true;
+  state.busy = true; dbg.checks++;
   SOURCES.forEach(s => { (state.src[s.key] || (state.src[s.key] = {})).busy = true; });
   render();
   await Promise.all(SOURCES.map(async s => {
     const st = state.src[s.key];
     try {
-      const items = s.load ? await s.load() : s.parse(await getJSON(s.url()));
+      const items = s.load ? await s.load() : s.parse(await getJSON(s.url(), 0, s.key));
       items.forEach(i => { if (!i.tab) i.tab = s.tabs[0]; });
       state.items[s.key] = items;
       Object.assign(st, {ok: true, okAt: Date.now(), err: ""});
@@ -631,6 +650,100 @@ async function check(){
   render();
 }
 
+/* ---------- debug report (Sources → Debug info) ---------- */
+const BUILD = "2026-10-04 19:23Z fb7ce43";
+const dbg = {log: [], errors: [], opened: Date.now(), checks: 0, test: null};
+const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
+function note(tag, kind, t0, result){
+  dbg.log.push({t0, ms: Date.now() - t0, tag: tag || "-", kind, result});
+  if (dbg.log.length > 60) dbg.log.shift();
+  updateDebug();
+}
+addEventListener("error", e => { dbg.errors.push(`${hms(Date.now())} ${e.message || "error"}${e.filename ? " @ " + e.filename.split("/").pop() + ":" + e.lineno : ""}`); if (dbg.errors.length > 20) dbg.errors.shift(); });
+addEventListener("unhandledrejection", e => { dbg.errors.push(`${hms(Date.now())} unhandled: ${(e.reason && e.reason.message) || e.reason}`); });
+function debugReport(){
+  const app = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  let store = "ok"; try { localStorage.setItem("slcw-t", "1"); localStorage.removeItem("slcw-t"); } catch (e) { store = "blocked"; }
+  const L = [
+    `SLCo Watch debug · build ${BUILD}`,
+    `Report ${new Date().toISOString()} · opened ${hms(dbg.opened)} · checks ${dbg.checks}${state.busy ? " (one running)" : ""}`,
+    `${app ? "Home-screen app" : "Browser tab"} · online ${navigator.onLine} · storage ${store} · ${location.host}${location.pathname}`,
+    `Screen ${innerWidth}x${innerHeight} @${devicePixelRatio}x · ${Intl.DateTimeFormat().resolvedOptions().timeZone} · ${navigator.language}`,
+    navigator.userAgent, "", "Sources:"
+  ];
+  for (const s of SOURCES){
+    const x = state.src[s.key] || {};
+    L.push(`  ${s.key.padEnd(6)} ${x.busy ? "checking" : x.ok === undefined ? "not yet" : x.ok ? "up" : "DOWN: " + x.err} · ${(state.items[s.key] || []).length} flagged${x.okAt ? " · last ok " + hms(x.okAt) : ""}`);
+  }
+  L.push(`  news query: ${newsMode} · script format: ${gdeltScript ? "in use" : "not used"}`, "", "GDELT test:");
+  if (!dbg.test) L.push("  not run");
+  else { dbg.test.lines.forEach(x => L.push("  " + x)); if (dbg.test.running) L.push("  running…"); }
+  L.push("", "Requests (oldest first):");
+  dbg.log.forEach(e => L.push(`  ${hms(e.t0)} ${e.tag.padEnd(11)} ${e.kind.padEnd(6)} ${String(e.ms).padStart(5)}ms  ${e.result}`));
+  if (dbg.errors.length){ L.push("", "Page errors:"); dbg.errors.forEach(x => L.push("  " + x)); }
+  return L.join("\n");
+}
+function openDebug(){
+  showSheet(`<h2>Debug info</h2><div class="sub" id="dbgSub"></div><pre id="dbg"></pre><div class="row"><button class="btn go" type="button" data-copy>Copy</button>${CLOSE}</div>`);
+  runTest();
+  updateDebug();
+}
+function updateDebug(){
+  const pre = document.getElementById("dbg");
+  if (!pre || $("#sheet").hidden) return;
+  const top = pre.scrollTop;
+  pre.textContent = debugReport();
+  pre.scrollTop = top;
+  $("#dbgSub").textContent = dbg.test && dbg.test.running ? "Testing the news source, about 15 seconds…" : "Done. Tap Copy, then paste it into the chat.";
+}
+/* Ask GDELT three ways to tell "can't connect" from "answered but the page may not read it" from "works". */
+async function runTest(){
+  if (dbg.test && dbg.test.running) return;
+  const T = dbg.test = {running: true, lines: []}, add = x => { T.lines.push(x); updateDebug(); };
+  const q = NEWS_QUERY[newsMode], url = gdeltUrl(q, "json", 5);
+  const timed = async fn => { const t0 = Date.now(); try { return [await fn(), Date.now() - t0]; } catch (e) { return [e, Date.now() - t0]; } };
+  const limit = () => { const c = new AbortController(); setTimeout(() => c.abort(), 15000); return c.signal; };
+  await gdeltTurn();
+  const [a, msA] = await timed(async () => {
+    const r = await fetch(url, {cache: "no-store", signal: limit()}), text = await r.text();
+    let what; try { what = count(JSON.parse(text)); } catch (e) { what = `reply "${snippet(text).slice(0, 90)}"`; }
+    return {ok: r.ok, line: `HTTP ${r.status} · ${r.headers.get("content-type") || "no type"} · ${what}`};
+  });
+  const aErr = a instanceof Error;
+  add(`A fetch    ${msA}ms  ${aErr ? a.name + ": " + a.message : a.line}`);
+  if (!aErr){
+    add(a.ok ? "→ GDELT answers and the page can read it right now." : "→ GDELT answered with an error status (see A).");
+    T.running = false; updateDebug(); return;
+  }
+  await gdeltTurn();
+  const [b, msB] = await timed(() => fetch(url, {mode: "no-cors", cache: "no-store", signal: limit()}));
+  const bOk = !(b instanceof Error);
+  add(`B no-cors  ${msB}ms  ${bOk ? "server answered (" + b.type + ")" : b.name + ": " + b.message}`);
+  await gdeltTurn();
+  const [c, msC] = await timed(() => jsonp(gdeltUrl(q, "jsonp", 5), 15000, "test"));
+  const cOk = !(c instanceof Error);
+  add(`C script   ${msC}ms  ${cOk ? "callback · " + count(c) : c.message}`);
+  if (cOk) gdeltScript = true;
+  add(!bOk ? "→ This device can't connect to GDELT at all (network, DNS, content blocker, or a block on this address)."
+    : cOk ? "→ GDELT answers, but in a form fetch can't read. The script format works, so the page now uses it."
+    : "→ GDELT answers but refuses or errors for this device or network (throttled or blocked).");
+  T.running = false; updateDebug();
+}
+async function copyDebug(btn){
+  const text = debugReport();
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;font-size:16px";
+    document.body.append(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    try { ok = document.execCommand("copy"); } catch (e2) {}
+    ta.remove();
+  }
+  btn.textContent = ok ? "Copied" : "Couldn't copy: select the text";
+  setTimeout(() => { if (btn.isConnected) btn.textContent = "Copy"; }, 2500);
+}
+
 /* ---------- events ---------- */
 document.addEventListener("click", e => {
   const tab = e.target.closest("#tabs button");
@@ -640,6 +753,9 @@ document.addEventListener("click", e => {
   if (e.target.closest("#more")){ openAll(); return; }
   if (e.target.closest("#status")){ openSources(); return; }
   if (e.target.closest("[data-recheck]")){ check(); return; }
+  if (e.target.closest("[data-debug]")){ openDebug(); return; }
+  const cp = e.target.closest("[data-copy]");
+  if (cp){ copyDebug(cp); return; }
   if (e.target.closest("#refresh")){ check(); return; }
   if (e.target.closest("[data-close]") || e.target.id === "sheet") closeSheet();
 });
