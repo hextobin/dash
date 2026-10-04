@@ -133,8 +133,7 @@ const RADIUS_MI = 60;
 const NWS_PAGE = "https://forecast.weather.gov/showsigwx.php?warnzone=UTZ105&warncounty=UTC035&firewxzone=UTZ478&local_place1=Salt+Lake+City+UT";
 
 const SOURCES = [
-  {key: "news", tabs: ["safety"], name: "local news", short: "news", label: "Local news incidents", provider: "GDELT Project", home: "https://www.gdeltproject.org/", url: newsUrl, parse: parseNews,
-   wait: 25000, gap: 6000},   // GDELT can be slow and allows one request every 5 seconds
+  {key: "news", tabs: ["safety"], name: "local news", short: "news", label: "Local news incidents", provider: "GDELT Project", home: "https://www.gdeltproject.org/", load: loadNews},
   {key: "nws", tabs: ["weather", "safety"], name: "NWS alerts", short: "NWS", label: "Emergency and weather alerts", provider: "National Weather Service", home: "https://www.weather.gov/slc/",
    url: () => "https://api.weather.gov/alerts/active?area=UT", parse: parseNws},
   {key: "quakes", tabs: ["quakes"], name: "earthquakes", short: "quakes", label: "Earthquakes", provider: "USGS", home: "https://earthquake.usgs.gov/", url: quakeUrl, parse: parseQuakes},
@@ -187,12 +186,44 @@ const paras = t => String(t || "").replace(/\r/g, "").split(/\n\s*\n/).map(x => 
 /* ---------- Local news: human-caused incidents (GDELT, last 36 hours) ---------- */
 const NEWS_PLACES = ['"Salt Lake"', '"West Valley"', '"West Jordan"', '"South Jordan"', "Taylorsville", "Millcreek", "Herriman",
   '"Cottonwood Heights"', "Holladay", "Midvale", "Kearns", "Magna", "Draper", "Murray", "Sandy", "Riverton"];
-const NEWS_TERMS = ["shooting", "gunfire", "stabbing", "stabbed", "homicide", "murder", "standoff", "barricaded", "SWAT", "lockdown",
+const NEWS_TERMS = ["shooting", "gunfire", "stabbing", "stabbed", "homicide", "murder", "standoff", "barricaded", "lockdown",
   "evacuation", "evacuated", '"bomb threat"', "explosion", "hazmat", "protest", "kidnapping", "abducted", '"Amber Alert"', "carjacking", "manhunt"];
-function newsUrl(){
-  const q = `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`;
-  return "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
-    "&mode=artlist&format=json&maxrecords=250&timespan=36h&sort=DateDesc";
+const NEWS_SITES = ["ksl.com", "kslnewsradio.com", "fox13now.com", "kutv.com", "abc4.com", "sltrib.com", "deseret.com", "gephardtdaily.com", "utahnewsdispatch.com", "kuer.org"];
+const NEWS_QUERY = {
+  // Salt Lake outlets only: precise, cheap for GDELT, and can't be crowded out by syndicated wire stories
+  local: `(${NEWS_SITES.map(d => "domain:" + d).join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`,
+  // Any outlet naming a county place: used if GDELT rejects the first query
+  places: `(${NEWS_PLACES.join(" OR ")}) (${NEWS_TERMS.join(" OR ")})`
+};
+let newsMode = "local", gdeltAt = 0, gdeltScript = false;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const gdeltUrl = (q, format) => "https://api.gdeltproject.org/api/v2/doc/doc?query=" + encodeURIComponent(q) +
+  `&mode=artlist&format=${format}&maxrecords=250&timespan=36h&sort=DateDesc`;
+async function gdelt(q){
+  const wait = gdeltAt + 5500 - Date.now();   // GDELT allows one request every 5 seconds
+  if (wait > 0) await sleep(wait);
+  gdeltAt = Date.now();
+  if (gdeltScript) return jsonp(gdeltUrl(q, "jsonp"), 25000);
+  try { return await getJSON(gdeltUrl(q, "json"), 25000); }
+  catch (e) {
+    if (e.message !== "unreachable or blocked") throw e;
+    // The browser couldn't read GDELT's reply (often a busy or throttle reply without the header that lets pages read it).
+    // Wait out the limit and ask once more in GDELT's script format, which doesn't depend on that header.
+    await sleep(5500); gdeltAt = Date.now();
+    const j = await jsonp(gdeltUrl(q, "jsonp"), 25000);
+    gdeltScript = true;   // the script format works here, so use it directly for the rest of this visit
+    return j;
+  }
+}
+async function loadNews(){
+  if (newsMode === "local"){
+    let j = null;
+    try { j = await gdelt(NEWS_QUERY.local); }
+    catch (e) { if (!e.reply || /limit requests/i.test(e.reply)) throw e; }   // GDELT answered with an error message: try the other query
+    if (j && Array.isArray(j.articles) && j.articles.length) return parseNews(j);
+    newsMode = "places";   // rejected or empty (ten newsrooms always have some matching story), so switch for this session
+  }
+  return parseNews(await gdelt(NEWS_QUERY.places));
 }
 /* First matching rule wins: [label, headline pattern, level while fresh]. */
 const NEWS_RULES = [
@@ -532,7 +563,8 @@ function openSources(){
     return `<li><i class="${wait ? "" : st.ok ? "up" : "down"}"></i><div><b>${esc(s.label)}</b><span>${esc(line)}</span></div></li>`;
   }).join("");
   const sub = state.busy ? "Checking now" : state.checked ? `Checked ${clock(state.checked)} · rechecks every 5 minutes while open` : "";
-  showSheet(`<h2>Sources</h2><div class="sub">${esc(sub)}</div><ul class="srcs">${rows}</ul><div class="row"><button class="btn go" type="button" data-recheck${state.busy ? " disabled" : ""}>${state.busy ? "Checking…" : "Check again"}</button>${CLOSE}</div>`);
+  const note = SOURCES.some(isDown) ? `<p class="small">A source marked down didn't answer in a usable way, usually because the provider is busy or limiting requests. The rest of the page still works, and it tries again on the next check.</p>` : "";
+  showSheet(`<h2>Sources</h2><div class="sub">${esc(sub)}</div><ul class="srcs">${rows}</ul>${note}<div class="row"><button class="btn go" type="button" data-recheck${state.busy ? " disabled" : ""}>${state.busy ? "Checking…" : "Check again"}</button>${CLOSE}</div>`);
 }
 
 /* ---------- fetching ---------- */
@@ -550,22 +582,41 @@ async function getJSON(url, ms){
   try { return JSON.parse(text); } catch (e) {}
   // GDELT occasionally sends stray control characters or bad escapes inside titles
   try { return JSON.parse(text.replace(/[\u0000-\u001f]+/g, " ").replace(/\\'/g, "'").replace(/\\(?!["\\\/bfnrtu])/g, "\\\\")); } catch (e) {}
-  throw new Error(/limit requests/i.test(text) ? "rate limited" : "unexpected response");
+  const reply = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const err = new Error(/limit requests/i.test(reply) ? "rate limited" : `unexpected reply: "${reply.slice(0, 70)}"`);
+  err.reply = reply;
+  throw err;
+}
+/* Script-tag request (JSONP): works even when a reply lacks the header that lets pages read it with fetch. */
+let jsonpN = 0;
+function jsonp(url, ms){
+  return new Promise((resolve, reject) => {
+    const cb = "slcwCb" + (++jsonpN) + Date.now().toString(36), s = document.createElement("script");
+    let done = false, timer;
+    const end = (err, data) => {
+      if (done) return;
+      done = true; clearTimeout(timer); s.remove();
+      window[cb] = () => {};   // a late reply must not throw
+      err ? reject(new Error(err)) : resolve(data && typeof data === "object" ? data : {});
+    };
+    timer = setTimeout(() => end("timed out"), ms);
+    window[cb] = data => end(null, data);
+    s.onerror = () => end("unreachable or blocked");
+    s.onload = () => setTimeout(() => end("sent an error instead of results"), 0);   // loaded but never called back
+    s.referrerPolicy = "no-referrer";
+    s.src = url + "&callback=" + cb;
+    document.head.append(s);
+  });
 }
 async function check(){
   if (state.busy) return;
   state.busy = true;
-  const now = Date.now();
-  const run = SOURCES.filter(s => {
-    const st = state.src[s.key] || (state.src[s.key] = {});
-    if (s.gap && now - (st.tried || 0) < s.gap) return false;   // too soon to ask this provider again
-    st.busy = true; st.tried = now; return true;
-  });
+  SOURCES.forEach(s => { (state.src[s.key] || (state.src[s.key] = {})).busy = true; });
   render();
-  await Promise.all(run.map(async s => {
+  await Promise.all(SOURCES.map(async s => {
     const st = state.src[s.key];
     try {
-      const items = s.parse(await getJSON(s.url(), s.wait));
+      const items = s.load ? await s.load() : s.parse(await getJSON(s.url()));
       items.forEach(i => { if (!i.tab) i.tab = s.tabs[0]; });
       state.items[s.key] = items;
       Object.assign(st, {ok: true, okAt: Date.now(), err: ""});
