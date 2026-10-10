@@ -217,7 +217,7 @@ const isForeign = t => FOREIGN.test(String(t || ""));
 
 /* ---------- the rules: what counts as escalation ----------
    [label, tab, level, pattern, and-pattern (optional)]. First match wins; the headline is tested before the post text. */
-const PROTEST = /protest|demonstrat|march(ers|ed)?\b|rall(y|ies)|crowds?|activists|\bmobs?\b/i;
+const PROTEST = /protest|demonstrat|\bmarchers\b|activists|counter-?protest/i;
 const UNREST_WORDS = /protest|demonstrat|unrest|riot|loot|violence|disturbance|disorder|uprising/i;
 const RULES = [
   ["Martial law", "orders", 3, /martial law/i],
@@ -241,6 +241,7 @@ const LIFTED = /\b(lift(s|ed|ing)?|end(s|ed|ing)?|expire[sd]?|rescind\w*|withdra
 const YOUTH = /\b(youth|teen|juvenile|minors?|kids|summer)\b/i;
 const OFFTOPIC = /\b(NBA|NFL|MLB|NHL|MLS|WNBA|game|fans|stadium|concert|festival|movie|film|series|album|season|playoffs?|super bowl|world series|championship|parade|recipe|Riot Games|League of Legends|weather|hurricane|wildfire|tornado|storm surge|flood|blizzard|earthquake|power outage)\b/i;
 const SKIP_PATH = /\/(sports|opinion|opinions|entertainment|lifestyle|arts|culture|style|food|travel|books|podcasts?|games)\//i;
+const NATIONAL = new Set(["Insurrection Act", "Martial law", "Troop deployment"]);
 /* Why a matched item is set aside, or "" to flag it. */
 function whyNot(rule, title, text, url, place){
   const both = title + " " + text;
@@ -252,6 +253,7 @@ function whyNot(rule, title, text, url, place){
   if (rule[0] === "Curfew" && YOUTH.test(both)) return "Routine youth curfew";
   if (["Curfew", "Troop deployment", "State of emergency"].includes(rule[0]) && LIFTED.test(title)) return "Order lifted or ending";
   if (!place) return isForeign(both) ? "Outside the US" : "No US place named";
+  if (place === "US" && !NATIONAL.has(rule[0])) return "No specific US place named";
   return "";
 }
 const ruleFor = t => RULES.find(r => r[3].test(t) && (!r[4] || r[4].test(t)));
@@ -268,7 +270,9 @@ const OUTLETS = {"apnews.com": "AP", "reuters.com": "Reuters", "npr.org": "NPR",
   "axios.com": "Axios", "latimes.com": "LA Times", "theguardian.com": "Guardian", "politico.com": "Politico", "thehill.com": "The Hill", "propublica.org": "ProPublica",
   "chicagotribune.com": "Chicago Tribune", "sfchronicle.com": "SF Chronicle", "bostonglobe.com": "Boston Globe", "startribune.com": "Star Tribune",
   "seattletimes.com": "Seattle Times", "oregonlive.com": "Oregonian", "houstonchronicle.com": "Houston Chronicle", "ajc.com": "AJC", "denverpost.com": "Denver Post",
-  "foxnews.com": "Fox News", "wikipedia.org": "Wikipedia"};
+  "foxnews.com": "Fox News", "wikipedia.org": "Wikipedia",
+  "reut.rs": "Reuters", "apne.ws": "AP", "nyti.ms": "New York Times", "wapo.st": "Washington Post", "n.pr": "NPR", "cnn.it": "CNN",
+  "nbcnews.to": "NBC News", "cbsn.ws": "CBS News", "abcn.ws": "ABC News", "politi.co": "Politico", "trib.al": "Chicago Tribune"};
 const outlet = d => { d = String(d || "").replace(/^www\./, ""); const k = Object.keys(OUTLETS).find(x => d === x || d.endsWith("." + x)); return k ? OUTLETS[k] : d; };
 const news = {found: new Set(), missing: new Set()};
 const baseDomain = h => h.replace(/\.web\.brid\.gy$/, "");
@@ -377,12 +381,19 @@ function classify(list, o){
     const key = isWiki ? "w:" + title.slice(0, 80) : normUrl(url);
     if (seen.has(key)) continue;
     seen.add(key); checked++;
-    const rule = ruleFor(title) || ruleFor(isWiki ? title + " · " + text : text);
+    /* News must show the escalation in its headline: summaries often mention a curfew or a crowd in passing.
+       A Wikipedia entry is one sentence, so its topic heading counts too. */
+    const rule = ruleFor(title) || (isWiki ? ruleFor(title + " · " + text) : null);
+    const inText = !rule && !isWiki ? ruleFor(text) : null;
     let place = usPlace(title) || usPlace(text);
     /* The Insurrection Act, martial law and the National Guard are American by definition when nowhere abroad is named. */
     if (!place && rule && /insurrection act|martial law|national guard/i.test(title) && !isForeign(title + " " + text)) place = "US";
     const c = {key, title, url, t: a.t, outlets: [isWiki ? "Wikipedia" : outlet(a.dom)], wiki: a.wiki, srcName: a.srcName, ctx: isWiki ? text : ""};
-    if (!rule){ if (PROTEST.test(title) && place) protests++; continue; }
+    if (!rule){
+      if (PROTEST.test(title) && place) protests++;
+      else if (inText && place && place !== "US") near.push(Object.assign(c, {why: "Only in the summary, not the headline", rule: inText}));
+      continue;
+    }
     const why = whyNot(rule, title, isWiki ? "" : text, url, place);
     if (why){ near.push(Object.assign(c, {why, rule})); continue; }
     Object.assign(c, {w: words(title), rule, place});
@@ -634,7 +645,7 @@ async function check(){
 }
 
 /* ---------- debug report (Sources → Debug info) ---------- */
-const BUILD = "2026-10-10 22:32Z";
+const BUILD = "2026-10-10 22:46Z";
 const dbg = {log: [], errors: [], opened: Date.now(), checks: 0};
 const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
 function note(tag, kind, t0, result){
