@@ -146,7 +146,7 @@ const NWS_PAGE = "https://forecast.weather.gov/showsigwx.php?warnzone=UTZ105&war
 
 const SOURCES = [
   {key: "news", tabs: ["safety"], name: "local news", short: "news", label: "Local news incidents", provider: "Bluesky newsroom accounts", home: "https://bsky.app/profile/sltrib.com", load: loadNews,
-   rule: "Flagged when a post from the last 36 hours describes an incident in Salt Lake County."},
+   rule: "Flagged when the headline of a post from the last 36 hours describes an incident in Salt Lake County."},
   {key: "nws", tabs: ["weather", "safety"], name: "NWS alerts", short: "NWS", label: "Emergency and weather alerts", provider: "National Weather Service", home: "https://www.weather.gov/slc/",
    url: () => "https://api.weather.gov/alerts/active?area=UT", parse: parseNws, rule: "Flagged when an alert covers Salt Lake County."},
   {key: "quakes", tabs: ["quakes"], name: "earthquakes", short: "quakes", label: "Earthquakes", provider: "USGS", home: "https://earthquake.usgs.gov/", url: quakeUrl, parse: parseQuakes,
@@ -311,19 +311,24 @@ function newsItems(list){
     const url = String(a.url || "").replace(/^http:\/\//i, "https://"), dom = String(a.dom || "").toLowerCase();
     if (!title || !(a.t > cut) || !/^https:\/\//.test(url)) continue;   // older than 36 hours, or unusable
     const c = {key: normUrl(url), title, url, t: a.t, outlets: [outlet(dom)]};
-    const rule = NEWS_RULES.find(r => r[1].test(title)) || NEWS_RULES.find(r => r[1].test(text));
-    const place = placeIn(title) || placeIn(text);
+    /* The incident must be in the headline: summaries often mention a shooting or an abduction in passing
+       (a politics story about Ukraine's abducted children, say). A headline that names somewhere else stays
+       elsewhere even if the summary carries a Salt Lake dateline. */
+    const rule = NEWS_RULES.find(r => r[1].test(title)), inText = rule ? null : NEWS_RULES.find(r => r[1].test(text));
+    const titlePlace = placeIn(title), place = titlePlace || placeIn(text);
     const why = SKIP_PATH.test(url) ? "National or opinion section"
       : SPORTS.test(title) ? "Sports or entertainment"
       : COURT.test(title) ? "Court or policy story"
       : ACCIDENT.test(title + " " + text) ? "Accident, not a threat"
-      : !rule ? "No incident words"
+      : !rule ? (inText && place ? "Only in the summary, not the headline" : "No incident words")
+      : !titlePlace && OTHER_UT.test(title) ? "Elsewhere in Utah"
+      : !titlePlace && ELSEWHERE.test(title) ? "Outside Utah"
       : place ? ""
-      : OTHER_UT.test(title + " " + text) ? "Elsewhere in Utah"
-      : ELSEWHERE.test(title + " " + text) ? "Outside Utah"
+      : OTHER_UT.test(text) ? "Elsewhere in Utah"
+      : ELSEWHERE.test(text) ? "Outside Utah"
       : "No Salt Lake County place named";
     if (why){
-      if (!seen.has(c.key)){ seen.add(c.key); (rule ? near : other).push(Object.assign(c, {why})); }
+      if (!seen.has(c.key)){ seen.add(c.key); (rule || (inText && place) ? near : other).push(Object.assign(c, {why})); }
       continue;
     }
     seen.add(c.key);
@@ -730,7 +735,7 @@ async function check(){
 }
 
 /* ---------- debug report (Sources → Debug info) ---------- */
-const BUILD = "2026-10-11 22:44Z";
+const BUILD = "2026-10-26 13:01Z";
 const dbg = {log: [], errors: [], opened: Date.now(), checks: 0};
 const hms = ms => new Date(ms).toLocaleTimeString("en-GB", {hour12: false});
 function note(tag, kind, t0, result){
